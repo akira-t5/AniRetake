@@ -1,3 +1,6 @@
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Developer-only (do not publish to GitHub)
+COMMANDS.md
