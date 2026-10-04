@@ -694,6 +694,28 @@
         padding: 4px 8px;
         font-size: 12px;
       }
+      .app.inputOnly {
+        grid-template-columns: 280px 1fr;
+      }
+      .app.inputOnly .preview {
+        display: none;
+      }
+      .settingsDanger {
+        margin-top: 18px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+      }
+      .settingsDanger h3 {
+        color: var(--red);
+        font-size: 13px;
+        margin: 0 0 8px;
+      }
+      .dangerBtn {
+        width: 100%;
+        color: var(--red);
+        background: #fff;
+        border: 1px solid var(--red);
+      }
       @media (max-width: 1100px) {
         .app {
           display: block;
@@ -1046,6 +1068,7 @@
               ><button class="btn secondary" id="dup" title="Ctrl/⌘+D">複製</button>
             </div>
             <div class="hint" id="summary"></div>
+            <div class="hint" id="openCount"></div>
             <label class="dupToggle"
               ><input id="groupDup" type="checkbox" />同じカット番号をまとめて表示</label
             ><label class="dupToggle"><input id="hideDone" type="checkbox" />作業済みを隠す</label>
@@ -1086,7 +1109,8 @@
           <div class="tools">
             <button class="mini" id="prev" title="Ctrl/⌘+↑">前</button
             ><button class="mini" id="next" title="Ctrl/⌘+↓">次</button
-            ><button class="mini" id="del">削除</button>
+            ><button class="mini" id="del">削除</button
+            ><button class="mini" id="togglePreview">入力だけ見る</button>
           </div>
         </div>
         <div class="box" id="verBox">
@@ -1107,12 +1131,9 @@
           <label class="doneTick verDoneRow"
             ><input id="verDone" type="checkbox" />この版は作業済み</label
           >
-          <div class="hint">
-            一覧の「済」は、そのカットの最新の版です。「新しい版を作る」は最大Rの次（R-02,
-            R-03…）を空で追加します。Rの数字を直すとその版の回数だけ変わり、新しい版は増えません。同じカットに同じRは持てません。最後の1版は削除できません。カットの削除は全版を消します。
-          </div>
+          <div class="hint" id="verDoneNote"></div>
         </div>
-        <div class="grid4" style="grid-template-columns: 1fr 1fr">
+        <div class="grid4" style="grid-template-columns: 1fr 1.2fr 0.8fr">
           <div class="field">
             <label>カット番号 <span class="req">必須</span></label
             ><input id="cut" placeholder="000A" />
@@ -1121,15 +1142,15 @@
             <label>兼用カット番号</label><input id="subcut" placeholder="000-000A_000" />
             <div class="hint">ハイフンとアンダーバーが使えます</div>
           </div>
-        </div>
-        <div class="field">
-          <label>優先度</label
-          ><select id="priority">
-            <option value="">空白</option>
-            <option>高</option>
-            <option>メーカーR</option>
-            <option>優先</option>
-          </select>
+          <div class="field">
+            <label>優先度</label
+            ><select id="priority">
+              <option value="">空白</option>
+              <option>高</option>
+              <option>メーカーR</option>
+              <option>優先</option>
+            </select>
+          </div>
         </div>
         <div class="field">
           <div class="labrow">
@@ -1165,9 +1186,7 @@
           <div id="drop" class="drop">画像をD＆D / クリックで複数追加</div>
           <input id="imgInput" type="file" accept="image/*" multiple style="display: none" />
           <div id="thumbs" class="thumbs"></div>
-          <div class="hint">
-            1枚目だけを修正内容の下に出します。2枚目以降は別カードへ、左上から最大4枚です。さらに多いときは3枚目以降のカードに続きます。追加はD&D、または貼り付け（Ctrl+V）です。サムネイルの「→」で他のカットへ移動・コピーできます（◀▶で順序変更）
-          </div>
+          <div class="hint">1枚目はこの下。2枚目以降は別ページ。追加はD&Dか Ctrl+V。詳しくはヘルプ。</div>
         </div>
       </section>
       <main class="preview">
@@ -1265,8 +1284,11 @@
         </div>
         <div id="processList" class="processList"></div>
         <div class="btnrow">
-          <button class="btn primary" id="addProcess">＋ 工程追加</button
-          ><button class="btn secondary" id="resetProcess">初期工程に戻す</button>
+          <button class="btn primary" id="addProcess">＋ 工程追加</button>
+        </div>
+        <div class="settingsDanger">
+          <h3>初期化</h3>
+          <button class="btn dangerBtn" id="resetProcess">初期工程に戻す</button>
         </div>
       </div>
     </div>
@@ -1304,7 +1326,7 @@
         KEY2 = "retake.v8",
         SCHEMA = 5,
         JSON_SCHEMA = 4;
-      const APP_VERSION = "1.10.1";
+      const APP_VERSION = "1.11.0";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -1326,7 +1348,11 @@
         prev: { key: "ArrowUp", ctrl: true },
         next: { key: "ArrowDown", ctrl: true },
       };
-      let prefs = { paper: "A5", shortcuts: JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS)) };
+      let prefs = {
+        paper: "A5",
+        inputOnly: false,
+        shortcuts: JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS)),
+      };
       const DEFAULT_PROCESSES = [
         "演出",
         "監督",
@@ -2099,6 +2125,8 @@
           ).filter((p) => p && p.name !== "未振分");
         if (d.prefs) {
           if (d.prefs.paper && PAPER_SIZES[d.prefs.paper]) prefs.paper = d.prefs.paper;
+          prefs.inputOnly = !!d.prefs.inputOnly;
+          applyInputOnly();
           if (d.prefs.shortcuts && typeof d.prefs.shortcuts === "object")
             prefs.shortcuts = {
               ...JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS)),
@@ -2395,6 +2423,7 @@
         });
         const dupKinds = Object.keys(allCounts).filter((k) => allCounts[k] > 1).length;
         const doneN = cuts.filter((c) => latestVer(c).done).length;
+        const openN = cuts.length - doneN;
         let list = $("list");
         list.innerHTML = "";
         let shown = 0,
@@ -2412,10 +2441,12 @@
           }
           shown++;
           let el = document.createElement("div");
-          const latestDone = !!latestVer(c).done;
+          const latest = latestVer(c);
+          const latestDone = !!latest.done;
+          const viewing = c === cuts[selected] && verOf(c) !== latest;
           el.className =
             "cutCard " + (i === selected ? "active " : "") + (latestDone ? "isDone" : "");
-          el.innerHTML = `<div class="cutTop"><div><div class="cutNo">${dispName(c) || "未入力"}${vs.length > 1 ? ` · ${vs.length}版` : ""}</div><div class="file">${fname(c)}</div></div><span class="badge">${c.priority || "空白"}</span><label class="doneTick"><input type="checkbox" class="doneBox" ${latestDone ? "checked" : ""}>済</label></div>`;
+          el.innerHTML = `<div class="cutTop"><div><div class="cutNo">${dispName(c) || "未入力"}${vs.length > 1 ? ` · ${vs.length}版` : ""}</div><div class="file">${fname(c)}</div></div><span class="badge">${c.priority || "空白"}</span><label class="doneTick" title="最新の版の作業済み"><input type="checkbox" class="doneBox" ${latestDone ? "checked" : ""}>最新 ${rrLabel(latest.r)}${viewing ? " ※別の版を表示中" : ""}</label></div>`;
           const box = el.querySelector(".doneBox");
           box.addEventListener("click", (ev) => ev.stopPropagation());
           box.addEventListener("change", (ev) => {
@@ -2437,8 +2468,9 @@
         if (!shown) list.innerHTML = '<div class="empty">該当カットなし</div>';
         $("summary").textContent =
           `全${cuts.length}件 / 表示${shown}件 / 昇順` +
-          (dupKinds ? ` / 番号の重複 ${dupKinds}種` : "") +
-          (doneN ? ` / 作業済み ${doneN}件` : "");
+          (dupKinds ? ` / 番号の重複 ${dupKinds}種` : "");
+        if ($("openCount"))
+          $("openCount").textContent = `未了 ${openN}件` + (doneN ? ` / 作業済み ${doneN}件` : "");
       }
       function loadToForm() {
         let c = cuts[selected],
@@ -2452,6 +2484,23 @@
         $("instrColor").value = v.instrColor || "black";
         renderVerSel();
         renderThumbs();
+      }
+      function syncDoneNote() {
+        const el = $("verDoneNote");
+        if (!el) return;
+        const c = cuts[selected];
+        const v = verOf(c);
+        const latest = latestVer(c);
+        el.textContent =
+          v === latest
+            ? "一覧のチェックも、この最新の版です。"
+            : `いま見ているのは ${rrLabel(v.r)} です。一覧のチェックは最新の ${rrLabel(latest.r)}（${latest.done ? "済" : "未了"}）です。`;
+      }
+      function applyInputOnly() {
+        const app = document.querySelector(".app");
+        if (app) app.classList.toggle("inputOnly", !!prefs.inputOnly);
+        if ($("togglePreview"))
+          $("togglePreview").textContent = prefs.inputOnly ? "プレビューを表示" : "入力だけ見る";
       }
       function renderVerSel() {
         const c = cuts[selected],
@@ -2472,6 +2521,7 @@
         $("verR").value = String(verOf(c).r);
         $("retakeDate").value = verOf(c).retakeDate || "";
         if ($("verDone")) $("verDone").checked = !!verOf(c).done;
+        syncDoneNote();
         if ($("copyVer")) $("copyVer").disabled = vs.length < 2;
         if ($("delVer")) $("delVer").disabled = vs.length <= 1;
       }
@@ -3740,7 +3790,12 @@
           },
         ];
         processes = JSON.parse(JSON.stringify(DEFAULT_PROCESSES));
-        prefs = { paper: "A5", shortcuts: JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS)) };
+        prefs = {
+          paper: "A5",
+          inputOnly: false,
+          shortcuts: JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS)),
+        };
+        applyInputOnly();
         updatePaperHint();
         syncShortcutTitles();
         selected = 0;
@@ -3946,7 +4001,7 @@
         document.title = APP_NAME + " v" + APP_VERSION + " - リテイク指示カード";
         $("helpTitle").textContent = APP_NAME + " バージョン " + APP_VERSION;
         $("helpBody").textContent =
-          `【${APP_NAME}】 バージョン ${APP_VERSION}\n\n■ 用途\nアニメ制作のリテイク指示カードを作成し、印刷・共有用PNGとして書き出します。\n\n■ 免責事項\n・本ソフトウェアは現状のまま提供され、動作や結果について一切の保証をしません。\n・本ソフトウェアの使用、または使用できなかったことによって生じた損害\n　（データの消失・破損、業務上の損失などを含みます）について、開発者は責任を負いません。\n・重要なデータを編集する前に、必ずバックアップ（JSON保存）を取ってください。\n・予告なく機能や仕様の変更、開発の終了を行う場合があります。\n\n■ 使用しているソフトウェア\n・ブラウザ標準 Web API（Canvas / FileReader / localStorage など）\n・追加の外部ライブラリはありません\n・ライセンス：MIT License\n\n■ ショートカット\n${SHORTCUT_ACTIONS.map((a) => "・" + formatShortcut(prefs.shortcuts[a.id]) + " … " + a.label).join("\n")}\n\n■ 版（R回数）\nカットごとに過去の版を残せます。「新しい版を作る」で次のRが空で追加されます。Rの数字を直しても新しい版は増えません。\n全PNG・テキスト・TSVは各カットの最新版（Rが一番大きい版）を出します。画面のPNGは表示中の版です。\n\n■ 修正内容\nリテイク内容とは別の欄です。版ごとに保存し、文字色（黒・赤・青）も版ごとに選べます。空でもカードに欄を出します。\n参考画像は1枚目だけを修正内容の下に出し、2枚目以降は別ページ（1ページ4枚・左上から）です。\n優先度はカード見出しの左端に出します。\n各版に「作業済み」を付けられます。一覧の済は最新の版です。印刷用のカードには出しません。\n「状況をコピー」は、版番号・カット数・画像の枚数・保存状態だけをコピーします。本文と画像そのものは含みません。\n\n■ データの保存場所\nテキスト・設定は localStorage キー：${KEY2}\n画像は IndexedDB（ブラウザ内・大容量）に1枚ずつ保存\n旧形式のデータ（${KEY}）は移行後もバックアップとして残しています\n（サイトごと。GitHub Pages とローカルファイルでは別データになります）\n\n■ サポート・公式情報\nFANBOX：https://akira0w0.fanbox.cc/\nX（旧Twitter）：https://x.com/Akira_0m0_\nGitHub：https://github.com/akira-t5/AniRetake\n変更履歴：https://github.com/akira-t5/AniRetake/blob/main/CHANGELOG.md\n\n(c) 2026 アキラ`;
+          `【${APP_NAME}】 バージョン ${APP_VERSION}\n\n■ 用途\nアニメ制作のリテイク指示カードを作成し、印刷・共有用PNGとして書き出します。\n\n■ 免責事項\n・本ソフトウェアは現状のまま提供され、動作や結果について一切の保証をしません。\n・本ソフトウェアの使用、または使用できなかったことによって生じた損害\n　（データの消失・破損、業務上の損失などを含みます）について、開発者は責任を負いません。\n・重要なデータを編集する前に、必ずバックアップ（JSON保存）を取ってください。\n・予告なく機能や仕様の変更、開発の終了を行う場合があります。\n\n■ 使用しているソフトウェア\n・ブラウザ標準 Web API（Canvas / FileReader / localStorage など）\n・追加の外部ライブラリはありません\n・ライセンス：MIT License\n\n■ ショートカット\n${SHORTCUT_ACTIONS.map((a) => "・" + formatShortcut(prefs.shortcuts[a.id]) + " … " + a.label).join("\n")}\n\n■ 版（R回数）\nカットごとに過去の版を残せます。「新しい版を作る」で次のRが空で追加されます。Rの数字を直しても新しい版は増えません。\n全PNG・テキスト・TSVは各カットの最新版（Rが一番大きい版）を出します。画面のPNGは表示中の版です。\n\n■ 修正内容\nリテイク内容とは別の欄です。版ごとに保存し、文字色（黒・赤・青）も版ごとに選べます。空でもカードに欄を出します。\n参考画像は1枚目だけを修正内容の下に出し、2枚目以降は別ページ（1ページ4枚・左上から）です。\n優先度はカード見出しの左端に出します。\n各版に「作業済み」を付けられます。入力欄のチェックは今見ている版、一覧のチェックは最新の版です。印刷用のカードには出しません。\n「入力だけ見る」でプレビューを隠せます。\n\n■ 版の操作\n「新しい版を作る」は最大Rの次を空で追加します。Rの数字を直しても新しい版は増えません。同じカットに同じRは持てません。最後の1版は削除できません。カットの削除は全版を消します。\n\n■ 参考画像\n1枚目だけを修正内容の下に出します。2枚目以降は別ページ（1ページ最大4枚、左上から）です。追加はD&DまたはCtrl+V。サムネイルの→で他のカットへ移動・コピー、◀▶で順序変更です。\n「状況をコピー」は、版番号・カット数・画像の枚数・保存状態だけをコピーします。本文と画像そのものは含みません。\n\n■ データの保存場所\nテキスト・設定は localStorage キー：${KEY2}\n画像は IndexedDB（ブラウザ内・大容量）に1枚ずつ保存\n旧形式のデータ（${KEY}）は移行後もバックアップとして残しています\n（サイトごと。GitHub Pages とローカルファイルでは別データになります）\n\n■ サポート・公式情報\nFANBOX：https://akira0w0.fanbox.cc/\nX（旧Twitter）：https://x.com/Akira_0m0_\nGitHub：https://github.com/akira-t5/AniRetake\n変更履歴：https://github.com/akira-t5/AniRetake/blob/main/CHANGELOG.md\n\n(c) 2026 アキラ`;
       }
       $("helpBtn").onclick = () => {
         fillHelp();
@@ -3964,6 +4019,12 @@
       };
       $("groupDup").onchange = () => renderList();
       $("hideDone").onchange = () => renderList();
+      $("togglePreview").onclick = () => {
+        prefs.inputOnly = !prefs.inputOnly;
+        applyInputOnly();
+        schedule();
+      };
+      applyInputOnly();
       $("verDone").onchange = () => {
         verOf(cuts[selected]).done = $("verDone").checked;
         renderList();
