@@ -399,7 +399,7 @@
         overflow: hidden;
       }
       .hdate {
-        font-size: 24px;
+        font-size: 15px;
       }
       .hsub {
         font-size: 11px;
@@ -1997,7 +1997,8 @@
           overflow: visible;
         }
         .tbLong,
-        .tbName {
+        .tbName,
+        .savePre {
           display: none;
         }
         .splitter {
@@ -2488,7 +2489,7 @@
         KEY2 = "retake.v8",
         SCHEMA = 8,
         JSON_SCHEMA = 4;
-      const APP_VERSION = "1.22.0";
+      const APP_VERSION = "1.22.1";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -3162,7 +3163,16 @@
         const el = $("save");
         el.dataset.state = st;
         el.style.color = st === "error" || st === "blocked" ? "var(--red)" : "";
-        el.textContent = msg;
+        // 狭い画面では「自動保存：」を省いて中身だけ見せる（全文はマウスを乗せると出る）
+        const m = /^自動保存：/.exec(msg);
+        if (m) {
+          el.textContent = "";
+          const pre = document.createElement("span");
+          pre.className = "savePre";
+          pre.textContent = m[0];
+          el.appendChild(pre);
+          el.appendChild(document.createTextNode(msg.slice(m[0].length)));
+        } else el.textContent = msg;
         el.title = msg;
       }
       function snapshotDoc() {
@@ -3797,7 +3807,10 @@
                   : `保存形式を版管理対応（v${APP_VERSION}）に更新しました（${cuts.length}カット・画像${n}枚）。更新前のデータは ${KEY2}.s2 に残しています。`;
           showBanner(
             v
-              ? msg
+              ? msg +
+                  (mode !== "v7" && mode !== "legacy"
+                    ? " あわせて、その後の版で増えた項目（作品・話数の切り替え・撮影テイクなど）にも対応する最新の形式にしました。"
+                    : "")
               : "データを読み込みましたが、新しい保存形式への保存を確認できませんでした。更新前のデータは残しています。念のため「JSON保存」でバックアップしてください。",
             [],
             "migrated",
