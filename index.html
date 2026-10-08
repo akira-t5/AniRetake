@@ -452,10 +452,21 @@
       }
       .matBox {
         flex: none;
-        width: 76px;
+        width: 108px;
         border-left: 2px solid #222;
         display: grid;
+        grid-template-columns: 1fr 30px;
         grid-template-rows: 30px repeat(6, 1fr);
+      }
+      .matR {
+        border-left: 2px dashed #222;
+        border-bottom: 1px dashed #888;
+      }
+      .matR:last-child {
+        border-bottom: 0;
+      }
+      .matHead.r {
+        border-left: 2px dashed #222;
       }
       .matHead {
         display: grid;
@@ -475,7 +486,7 @@
         overflow: hidden;
         border-bottom: 1px dashed #888;
       }
-      .matRow:last-child {
+      .matRow.last {
         border-bottom: 0;
       }
       .matSq {
@@ -1958,7 +1969,7 @@
         <div class="settingsSection">
           <h3>撮入れ素材の名前</h3>
           <div class="hint">
-            カードの修正内容欄の右端に、上から順に6枠並びます。2文字がおすすめです（長いと小さくなります）。空欄の枠は□だけを出すので、手書き用に使えます。
+            カードの修正内容欄の右端に、上から順に6枠並びます（右隣はR回数の手書き欄）。2文字がおすすめです（長いと小さくなります）。空欄の枠は□だけを出すので、手書き用に使えます。
           </div>
           <div class="matLabelRow">
             <div><label>1</label><input id="matLabel0" maxlength="6" /></div>
@@ -2042,7 +2053,7 @@
       };
       // 撮入れ素材の6枠の名前（環境設定で変更可）。空欄の枠はカードに□だけ出す
       const MAT_SLOTS = 6;
-      const DEFAULT_MAT_LABELS = ["作画", "背景", "CG", "2D", "撮R", ""];
+      const DEFAULT_MAT_LABELS = ["TP", "BG", "CG", "2D", "撮R", ""];
       let prefs = {
         paper: "A5",
         inputOnly: false,
@@ -3262,10 +3273,11 @@
       function renderMatBox(v) {
         const box = $("pmatBox"),
           on = cleanMats(v.mats);
-        let h = '<div class="matHead">撮入れ</div>';
+        let h = '<div class="matHead">撮入れ</div><div class="matHead r">R</div>';
         for (let i = 0; i < MAT_SLOTS; i++) {
-          const t = matLabel(i).replace(/[&<>"]/g, (c) => "&#" + c.charCodeAt(0) + ";");
-          h += `<div class="matRow"><span class="matSq">${on.includes(i) ? "✓" : ""}</span><span>${t}</span></div>`;
+          const t = matLabel(i).replace(/[&<>"]/g, (c) => "&#" + c.charCodeAt(0) + ";"),
+            last = i === MAT_SLOTS - 1 ? " last" : "";
+          h += `<div class="matRow${last}"><span class="matSq">${on.includes(i) ? "✓" : ""}</span><span>${t}</span></div><div class="matR"></div>`;
         }
         box.innerHTML = h;
       }
@@ -3972,10 +3984,11 @@
         centerText(ctx, cm.retakeDate ? fmtShort(cm.retakeDate) : "/", 1116, 1204, 64, 14, false);
         centerText(ctx, shootDate() ? fmtShort(shootDate()) : "/", 1116, 1204, 109, 14, false);
       }
-      // 撮入れ素材の縦枠（修正内容欄の右端 x=1128〜1204、見出し＋6行）
+      // 撮入れ素材の縦枠（修正内容欄の右端。素材 x=1098〜1174、R回数の手書き欄 x=1174〜1204。見出し＋6行）
       function drawMatBox(ctx, v) {
-        const x0 = 1128,
-          x1 = 1204,
+        const x0 = 1098,
+          xr = 1174,
+          x1 = xr,
           top = 170,
           head = 200,
           bottom = 470,
@@ -3989,12 +4002,19 @@
         ctx.moveTo(x0, top);
         ctx.lineTo(x0, bottom);
         ctx.moveTo(x0, head);
-        ctx.lineTo(x1, head);
+        ctx.lineTo(1204, head);
         ctx.stroke();
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(xr, top);
+        ctx.lineTo(xr, bottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
         ctx.fillStyle = ink;
         ctx.textAlign = "center";
         ctx.font = '900 14px "Noto Sans JP",sans-serif';
-        ctx.fillText("撮入れ", (x0 + x1) / 2, head - 10);
+        ctx.fillText("撮入れ", (x0 + xr) / 2, head - 10);
+        ctx.fillText("R", (xr + 1204) / 2, head - 10);
         ctx.textAlign = "left";
         for (let i = 0; i < MAT_SLOTS; i++) {
           const mid = head + rowH * i + rowH / 2,
@@ -4007,7 +4027,7 @@
             ctx.setLineDash([3, 3]);
             ctx.beginPath();
             ctx.moveTo(x0, head + rowH * (i + 1));
-            ctx.lineTo(x1, head + rowH * (i + 1));
+            ctx.lineTo(1204, head + rowH * (i + 1));
             ctx.stroke();
             ctx.setLineDash([]);
           }
@@ -4240,7 +4260,7 @@
         const _ic =
           { black: "#2C2C2B", red: "#c0392b", blue: "#1a5fb4" }[v.instrColor] || "#2C2C2B";
         ctx.fillStyle = _ic;
-        drawWrapped(ctx, v.instr || "", 782, 200, 332, 30, 458, 20, 11, true);
+        drawWrapped(ctx, v.instr || "", 782, 200, 302, 30, 458, 20, 11, true);
         drawMatBox(ctx, v);
         ctx.fillStyle = "#2C2C2B";
         let imgs = v.images || [];
@@ -4986,7 +5006,7 @@
         document.title = APP_NAME + " v" + APP_VERSION + " - リテイク指示カード";
         $("helpTitle").textContent = APP_NAME + " バージョン " + APP_VERSION;
         $("helpBody").textContent =
-          `【${APP_NAME}】 バージョン ${APP_VERSION}\n\n■ 用途\nアニメ制作のリテイク指示カードを作成し、印刷・共有用PNGとして書き出します。\n\n■ 免責事項\n・本ソフトウェアは現状のまま提供され、動作や結果について一切の保証をしません。\n・本ソフトウェアの使用、または使用できなかったことによって生じた損害\n　（データの消失・破損、業務上の損失などを含みます）について、開発者は責任を負いません。\n・重要なデータを編集する前に、必ずバックアップ（JSON保存）を取ってください。\n・予告なく機能や仕様の変更、開発の終了を行う場合があります。\n\n■ 使用しているソフトウェア\n・ブラウザ標準 Web API（Canvas / FileReader / localStorage など）\n・追加の外部ライブラリはありません\n・ライセンス：MIT License\n\n■ ショートカット\n${SHORTCUT_ACTIONS.map((a) => "・" + formatShortcut(prefs.shortcuts[a.id]) + " … " + a.label).join("\n")}\n\n■ 版（R回数）\nカットごとに過去の版を残せます。「新しい版を作る」で次のRが空で追加されます。Rの数字を直しても新しい版は増えません。\n全PNG・テキスト・TSVは各カットの最新版（Rが一番大きい版）を出します。画面のPNGは表示中の版です。\n\n■ 修正内容\nリテイク内容とは別の欄です。版ごとに保存し、文字色（黒・赤・青）も版ごとに選べます。空でもカードに欄を出します。\n参考画像は1枚目だけを修正内容の下に出し、2枚目以降は別ページ（1ページ4枚・左上から）です。\n優先度はカード見出しの左端に出します。\n各版に「作業済み」を付けられます。入力欄のチェックは今見ている版、一覧のチェックは最新の版です。印刷用のカードには出しません。\n「入力だけ見る」でプレビューを隠せます。\n\n■ 画面の配置\n上部バーに作品コード・話数・初期R、保存状態、PNG書き出し・全PNG・「出力・保存」メニュー（テキスト・TSV・JSON・状況をコピー・全リセット）、環境設定、ヘルプがあります。\n左はカット一覧、中央は入力欄、右はプレビューです。画面が狭いとき（約1180px以下）は、カット名の横の「入力」「プレビュー」で表示を切り替えます。\nプレビューをクリックするか「拡大」で画面いっぱいに表示します（もう一度クリックかEscで戻る）。拡大中も前／次のカットのショートカットが使えます。\n\n■ カット一覧のキー操作\n一覧をクリックしたあと、↑↓で選択、Home／Endで先頭／末尾、Enterでリテイク内容の入力欄へ、Spaceで最新の版の済／未を切り替えます。入力欄でEscを押すと一覧へ戻ります（日本語の変換中は除く）。\n一覧の上の「すべて／未了／済」の札で、最新の版の状態で絞り込めます（「未了」が以前の「作業済みを隠す」）。\n\n■ 撮入れ素材\n版ごとに、撮影に入れる素材（作画・背景・CG・2D・撮R）にチェックを付けられます。カードでは修正内容欄の右端に「撮入れ」の縦枠を出し、6枠すべてを□付きで並べます。チェックした素材だけ□に印が付きます。6枠目は初期では名前のない□だけの枠で、印刷後の手書きに使えます。\n枠の名前は環境設定の「撮入れ素材の名前」で変えられます（2文字がおすすめ）。名前を変えても付けたチェックは残ります。テキスト出力にも出します（表用TSVには出しません）。\n\n■ 版の操作\n「新しい版を作る」は最大Rの次を空で追加します。Rの数字を直しても新しい版は増えません。同じカットに同じRは持てません。最後の1版は削除できません。カットの削除は全版を消します。\n\n■ 参考画像\n1枚目だけを修正内容の下に出します。2枚目以降は別ページ（1ページ最大4枚、左上から）です。追加はD&DまたはCtrl+V。サムネイルの→で他のカットへ移動・コピー、◀▶で順序変更、✕で外します（画像のクリックでは消えません）。\n「状況をコピー」は、版番号・カット数・画像の枚数・保存状態だけをコピーします。本文と画像そのものは含みません。\n\n■ データの保存場所\nテキスト・設定は localStorage キー：${KEY2}\n画像は IndexedDB（ブラウザ内・大容量）に1枚ずつ保存\n旧形式のデータ（${KEY}）は移行後もバックアップとして残しています\n（サイトごと。GitHub Pages とローカルファイルでは別データになります）\n\n■ サポート・公式情報\nFANBOX：https://akira0w0.fanbox.cc/\nX（旧Twitter）：https://x.com/Akira_0m0_\nGitHub：https://github.com/akira-t5/AniRetake\n変更履歴：https://github.com/akira-t5/AniRetake/blob/main/CHANGELOG.md\n\n(c) 2026 アキラ`;
+          `【${APP_NAME}】 バージョン ${APP_VERSION}\n\n■ 用途\nアニメ制作のリテイク指示カードを作成し、印刷・共有用PNGとして書き出します。\n\n■ 免責事項\n・本ソフトウェアは現状のまま提供され、動作や結果について一切の保証をしません。\n・本ソフトウェアの使用、または使用できなかったことによって生じた損害\n　（データの消失・破損、業務上の損失などを含みます）について、開発者は責任を負いません。\n・重要なデータを編集する前に、必ずバックアップ（JSON保存）を取ってください。\n・予告なく機能や仕様の変更、開発の終了を行う場合があります。\n\n■ 使用しているソフトウェア\n・ブラウザ標準 Web API（Canvas / FileReader / localStorage など）\n・追加の外部ライブラリはありません\n・ライセンス：MIT License\n\n■ ショートカット\n${SHORTCUT_ACTIONS.map((a) => "・" + formatShortcut(prefs.shortcuts[a.id]) + " … " + a.label).join("\n")}\n\n■ 版（R回数）\nカットごとに過去の版を残せます。「新しい版を作る」で次のRが空で追加されます。Rの数字を直しても新しい版は増えません。\n全PNG・テキスト・TSVは各カットの最新版（Rが一番大きい版）を出します。画面のPNGは表示中の版です。\n\n■ 修正内容\nリテイク内容とは別の欄です。版ごとに保存し、文字色（黒・赤・青）も版ごとに選べます。空でもカードに欄を出します。\n参考画像は1枚目だけを修正内容の下に出し、2枚目以降は別ページ（1ページ4枚・左上から）です。\n優先度はカード見出しの左端に出します。\n各版に「作業済み」を付けられます。入力欄のチェックは今見ている版、一覧のチェックは最新の版です。印刷用のカードには出しません。\n「入力だけ見る」でプレビューを隠せます。\n\n■ 画面の配置\n上部バーに作品コード・話数・初期R、保存状態、PNG書き出し・全PNG・「出力・保存」メニュー（テキスト・TSV・JSON・状況をコピー・全リセット）、環境設定、ヘルプがあります。\n左はカット一覧、中央は入力欄、右はプレビューです。画面が狭いとき（約1180px以下）は、カット名の横の「入力」「プレビュー」で表示を切り替えます。\nプレビューをクリックするか「拡大」で画面いっぱいに表示します（もう一度クリックかEscで戻る）。拡大中も前／次のカットのショートカットが使えます。\n\n■ カット一覧のキー操作\n一覧をクリックしたあと、↑↓で選択、Home／Endで先頭／末尾、Enterでリテイク内容の入力欄へ、Spaceで最新の版の済／未を切り替えます。入力欄でEscを押すと一覧へ戻ります（日本語の変換中は除く）。\n一覧の上の「すべて／未了／済」の札で、最新の版の状態で絞り込めます（「未了」が以前の「作業済みを隠す」）。\n\n■ 撮入れ素材\n版ごとに、撮影に入れる素材（TP・BG・CG・2D・撮R）にチェックを付けられます。カードでは修正内容欄の右端に「撮入れ」の縦枠を出し、6枠すべてを□付きで並べます。チェックした素材だけ□に印が付きます。6枠目は初期では名前のない□だけの枠で、印刷後の手書きに使えます。右隣の「R」列は、素材ごとのR回数を手書きする欄です（空欄で出します）。\n枠の名前は環境設定の「撮入れ素材の名前」で変えられます（2文字がおすすめ）。名前を変えても付けたチェックは残ります。テキスト出力にも出します（表用TSVには出しません）。\n\n■ 版の操作\n「新しい版を作る」は最大Rの次を空で追加します。Rの数字を直しても新しい版は増えません。同じカットに同じRは持てません。最後の1版は削除できません。カットの削除は全版を消します。\n\n■ 参考画像\n1枚目だけを修正内容の下に出します。2枚目以降は別ページ（1ページ最大4枚、左上から）です。追加はD&DまたはCtrl+V。サムネイルの→で他のカットへ移動・コピー、◀▶で順序変更、✕で外します（画像のクリックでは消えません）。\n「状況をコピー」は、版番号・カット数・画像の枚数・保存状態だけをコピーします。本文と画像そのものは含みません。\n\n■ データの保存場所\nテキスト・設定は localStorage キー：${KEY2}\n画像は IndexedDB（ブラウザ内・大容量）に1枚ずつ保存\n旧形式のデータ（${KEY}）は移行後もバックアップとして残しています\n（サイトごと。GitHub Pages とローカルファイルでは別データになります）\n\n■ サポート・公式情報\nFANBOX：https://akira0w0.fanbox.cc/\nX（旧Twitter）：https://x.com/Akira_0m0_\nGitHub：https://github.com/akira-t5/AniRetake\n変更履歴：https://github.com/akira-t5/AniRetake/blob/main/CHANGELOG.md\n\n(c) 2026 アキラ`;
       }
       $("helpBtn").onclick = () => {
         fillHelp();
