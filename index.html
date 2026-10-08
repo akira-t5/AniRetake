@@ -2489,7 +2489,7 @@
         KEY2 = "retake.v8",
         SCHEMA = 9,
         JSON_SCHEMA = 4;
-      const APP_VERSION = "1.23.1";
+      const APP_VERSION = "1.24.0";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -2521,16 +2521,18 @@
         matLabels: [...DEFAULT_MAT_LABELS],
       };
       const DEFAULT_PROCESSES = [
+        "制作",
         "演出",
         "監督",
         "作監",
         "総作監",
         "動画",
         "仕上げ",
+        "動検",
+        "色検",
         "特効/2D",
         "背景",
         "CG",
-        "撮影",
       ].map((n) => ({ name: n, date: "" }));
       let processes = JSON.parse(JSON.stringify(DEFAULT_PROCESSES));
       let cuts = [
