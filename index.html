@@ -2489,7 +2489,7 @@
         KEY2 = "retake.v8",
         SCHEMA = 9,
         JSON_SCHEMA = 4;
-      const APP_VERSION = "1.23.0";
+      const APP_VERSION = "1.23.1";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -3561,8 +3561,6 @@
       }
       function applyDoc(d, mode, oldImgs) {
         const fromStore = mode !== "json";
-        const defR = (d.common && d.common.r) || "1",
-          defDate = (d.common && d.common.retakeDate) || "";
         if (d.common) {
           $("code").value = d.common.code || (fromStore ? "AAA" : "");
           $("ep").value = d.common.ep || (fromStore ? "00" : "");
@@ -3574,152 +3572,162 @@
               ? d.processes.map((x) => ({ name: x, date: "" }))
               : d.processes
           ).filter((p) => p && p.name !== "未振分");
-        if (d.prefs) {
-          if (d.prefs.paper && PAPER_SIZES[d.prefs.paper]) prefs.paper = d.prefs.paper;
-          prefs.inputOnly = !!d.prefs.inputOnly;
-          applyInputOnly();
-          if (Array.isArray(d.prefs.matLabels)) prefs.matLabels = cleanMatLabels(d.prefs.matLabels);
-          if (d.prefs.takeCodes && typeof d.prefs.takeCodes === "object") {
-            const tc = {};
-            ["v", "t", "s"].forEach((k) => {
-              if (typeof d.prefs.takeCodes[k] === "string")
-                tc[k] = d.prefs.takeCodes[k].replace(/[\s\-]/g, "").slice(0, 4);
-            });
-            prefs.takeCodes = tc;
-          } else delete prefs.takeCodes;
-          // 番号はこのブラウザでの回数。JSON読込では引き継がない（同じ日に番号が重ならないように）
-          if (mode !== "json" && d.prefs.jsonSeq && typeof d.prefs.jsonSeq === "object")
-            prefs.jsonSeq = d.prefs.jsonSeq;
-          if (/^\d{4}-\d{2}-\d{2}$/.test(d.prefs.lastRetakeDate || ""))
-            prefs.lastRetakeDate = d.prefs.lastRetakeDate;
-          else delete prefs.lastRetakeDate;
-          prefs.pvFit = ["fit", "width", "100"].includes(d.prefs.pvFit) ? d.prefs.pvFit : "fit";
-          if (d.prefs.sideW > 0) prefs.sideW = d.prefs.sideW | 0;
-          else delete prefs.sideW;
-          if (d.prefs.pvW > 0) prefs.pvW = d.prefs.pvW | 0;
-          else delete prefs.pvW;
-          if (typeof layoutColumns === "function") layoutColumns();
-          if (typeof syncFitButtons === "function") syncFitButtons();
-          if (d.prefs.shortcuts && typeof d.prefs.shortcuts === "object")
-            Object.keys(d.prefs.shortcuts).forEach((k) => {
-              const sc = d.prefs.shortcuts[k];
-              if (!sc || typeof sc.key !== "string" || sc.key.length > 20) delete d.prefs.shortcuts[k];
-            });
-          if (d.prefs.shortcuts && typeof d.prefs.shortcuts === "object")
-            prefs.shortcuts = {
-              ...JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS)),
-              ...d.prefs.shortcuts,
-            };
-        }
+        if (d.prefs) applyPrefs(d.prefs, mode);
         updatePaperHint();
         syncShortcutTitles();
         if (Array.isArray(d.cuts) && d.cuts.length) {
-          const seen = new Set(),
-            seenV = new Set(),
-            asIds = mode !== "json" && mode !== "legacy";
-          cuts = d.cuts.map((c, i) => {
-            c = c || {};
-            let id = typeof c.id === "string" && c.id && !seen.has(c.id) ? c.id : newId("c");
-            seen.add(id);
-            const pri = PRIORITIES.includes(c.priority) ? c.priority : "";
-            const takeImgs = (arr, pos) => {
-              if (asIds) return (arr || []).filter((x) => typeof x === "string");
-              const raw =
-                (arr && arr.length
-                  ? arr
-                  : oldImgs && Array.isArray(oldImgs[pos])
-                    ? oldImgs[pos]
-                    : []) || [];
-              return raw.filter(isImageDataUrl).map(regImg);
-            };
-            if (Array.isArray(c.versions) && c.versions.length) {
-              const versions = [];
-              c.versions.forEach((v) => {
-                v = v || {};
-                let vid = typeof v.id === "string" && v.id && !seenV.has(v.id) ? v.id : newId("v");
-                seenV.add(vid);
-                let r = parseR(v.r != null ? v.r : defR);
-                if (versions.some((x) => (x.r | 0) === r)) r = nextFreeR(versions, r);
-                versions.push(
-                  Object.assign(
-                    {
-                      id: vid,
-                      r,
-                      retakeDate: v.retakeDate || "",
-                      body: v.body || "",
-                      note: v.note || "",
-                      images: takeImgs(v.images),
-                    },
-                    instrOf(v),
-                  ),
-                );
-              });
-              let sv = c.selectedVer | 0;
-              if (sv < 0 || sv >= versions.length) sv = latestIdx({ versions, selectedVer: 0 });
-              return {
-                id,
-                cut: c.cut || "",
-                subcut: c.subcut || "",
-                priority: pri,
-                selectedVer: sv,
-                versions,
-              };
-            }
+          cuts = normalizeCuts(d, mode, oldImgs);
+          selected = Math.max(0, Math.min(d.selected | 0, cuts.length - 1));
+        }
+        if (mode !== "json" && !d.isEpisode) applyEpisodeList(d);
+      }
+      // 保存データ・JSON の設定（prefs）を取り込む。形の合わない値は捨てて初期値に戻す
+      function applyPrefs(p, mode) {
+        if (p.paper && PAPER_SIZES[p.paper]) prefs.paper = p.paper;
+        prefs.inputOnly = !!p.inputOnly;
+        applyInputOnly();
+        if (Array.isArray(p.matLabels)) prefs.matLabels = cleanMatLabels(p.matLabels);
+        if (p.takeCodes && typeof p.takeCodes === "object") {
+          const tc = {};
+          ["v", "t", "s"].forEach((k) => {
+            if (typeof p.takeCodes[k] === "string")
+              tc[k] = p.takeCodes[k].replace(/[\s\-]/g, "").slice(0, 4);
+          });
+          prefs.takeCodes = tc;
+        } else delete prefs.takeCodes;
+        // 番号はこのブラウザでの回数。JSON読込では引き継がない（同じ日に番号が重ならないように）
+        if (mode !== "json" && p.jsonSeq && typeof p.jsonSeq === "object")
+          prefs.jsonSeq = p.jsonSeq;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(p.lastRetakeDate || ""))
+          prefs.lastRetakeDate = p.lastRetakeDate;
+        else delete prefs.lastRetakeDate;
+        prefs.pvFit = ["fit", "width", "100"].includes(p.pvFit) ? p.pvFit : "fit";
+        if (p.sideW > 0) prefs.sideW = p.sideW | 0;
+        else delete prefs.sideW;
+        if (p.pvW > 0) prefs.pvW = p.pvW | 0;
+        else delete prefs.pvW;
+        if (typeof layoutColumns === "function") layoutColumns();
+        if (typeof syncFitButtons === "function") syncFitButtons();
+        if (p.shortcuts && typeof p.shortcuts === "object")
+          Object.keys(p.shortcuts).forEach((k) => {
+            const sc = p.shortcuts[k];
+            if (!sc || typeof sc.key !== "string" || sc.key.length > 20) delete p.shortcuts[k];
+          });
+        if (p.shortcuts && typeof p.shortcuts === "object")
+          prefs.shortcuts = {
+            ...JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS)),
+            ...p.shortcuts,
+          };
+      }
+      // 保存データ・JSON のカットを今の形（版つき）にそろえる。旧形式（版なし）は1つ目の版にする
+      function normalizeCuts(d, mode, oldImgs) {
+        const defR = (d.common && d.common.r) || "1",
+          defDate = (d.common && d.common.retakeDate) || "";
+        const seen = new Set(),
+          seenV = new Set(),
+          asIds = mode !== "json" && mode !== "legacy";
+        return d.cuts.map((c, i) => {
+          c = c || {};
+          let id = typeof c.id === "string" && c.id && !seen.has(c.id) ? c.id : newId("c");
+          seen.add(id);
+          const pri = PRIORITIES.includes(c.priority) ? c.priority : "";
+          const takeImgs = (arr, pos) => {
+            if (asIds) return (arr || []).filter((x) => typeof x === "string");
+            const raw =
+              (arr && arr.length
+                ? arr
+                : oldImgs && Array.isArray(oldImgs[pos])
+                  ? oldImgs[pos]
+                  : []) || [];
+            return raw.filter(isImageDataUrl).map(regImg);
+          };
+          if (Array.isArray(c.versions) && c.versions.length) {
+            const versions = [];
+            c.versions.forEach((v) => {
+              v = v || {};
+              let vid = typeof v.id === "string" && v.id && !seenV.has(v.id) ? v.id : newId("v");
+              seenV.add(vid);
+              let r = parseR(v.r != null ? v.r : defR);
+              if (versions.some((x) => (x.r | 0) === r)) r = nextFreeR(versions, r);
+              versions.push(
+                Object.assign(
+                  {
+                    id: vid,
+                    r,
+                    retakeDate: v.retakeDate || "",
+                    body: v.body || "",
+                    note: v.note || "",
+                    images: takeImgs(v.images),
+                  },
+                  instrOf(v),
+                ),
+              );
+            });
+            let sv = c.selectedVer | 0;
+            if (sv < 0 || sv >= versions.length) sv = latestIdx({ versions, selectedVer: 0 });
             return {
               id,
               cut: c.cut || "",
               subcut: c.subcut || "",
               priority: pri,
-              selectedVer: 0,
-              versions: [
-                Object.assign(
-                  {
-                    id: newId("v"),
-                    r: parseR(c.r != null ? c.r : defR),
-                    retakeDate: c.retakeDate || defDate,
-                    body: c.body || "",
-                    note: c.note || "",
-                    images: takeImgs(c.images, i),
-                  },
-                  instrOf(c),
-                ),
-              ],
+              selectedVer: sv,
+              versions,
             };
-          });
-          selected = Math.max(0, Math.min(d.selected | 0, cuts.length - 1));
-        }
-        if (mode !== "json" && !d.isEpisode) {
-          const list = (Array.isArray(d.episodes) ? d.episodes : [])
-            .map((e) => {
-              if (!e || typeof e.id !== "string") return null;
-              if (Array.isArray(e.cuts)) return e;
-              // 開いている話数の名前だけの項目（中身は d.cuts など）
-              if (e.id === d.activeEp && e.stored === "main") return { id: e.id, stored: "main", common: e.common };
-              if (!isEpStub(e)) return null;
-              const st = e.stats || {};
-              return {
-                id: e.id,
-                stored: "idb",
-                key: e.key,
-                common: e.common && typeof e.common === "object" ? e.common : {},
-                stats: { n: Math.max(0, st.n | 0), open: Math.max(0, st.open | 0) },
-                imgs: Array.isArray(e.imgs) ? e.imgs.filter((id) => typeof id === "string") : [],
-              };
-            })
-            .filter(Boolean);
-          if (list.length) {
-            episodes = list;
-            if (list.some((e) => e.id === d.activeEp)) activeEp = d.activeEp;
-            else {
-              // 開いている話数が一覧に無い（壊れたデータ）。他の話数の項目を開いている話数として扱うと、
-              // 切り替えたときにその話数の中身を上書きしてしまうので、別の項目として足す
-              activeEp = newId("e");
-              episodes.push({ id: activeEp, stored: "main", common: d.common });
-            }
-          } else {
-            episodes = [{ id: newId("e") }];
-            activeEp = episodes[0].id;
           }
+          return {
+            id,
+            cut: c.cut || "",
+            subcut: c.subcut || "",
+            priority: pri,
+            selectedVer: 0,
+            versions: [
+              Object.assign(
+                {
+                  id: newId("v"),
+                  r: parseR(c.r != null ? c.r : defR),
+                  retakeDate: c.retakeDate || defDate,
+                  body: c.body || "",
+                  note: c.note || "",
+                  images: takeImgs(c.images, i),
+                },
+                instrOf(c),
+              ),
+            ],
+          };
+        });
+      }
+      // 話数の一覧を復元する（中身ごとの項目・名前だけの開いている話数・IndexedDB の札）
+      function applyEpisodeList(d) {
+        const list = (Array.isArray(d.episodes) ? d.episodes : [])
+          .map((e) => {
+            if (!e || typeof e.id !== "string") return null;
+            if (Array.isArray(e.cuts)) return e;
+            // 開いている話数の名前だけの項目（中身は d.cuts など）
+            if (e.id === d.activeEp && e.stored === "main") return { id: e.id, stored: "main", common: e.common };
+            if (!isEpStub(e)) return null;
+            const st = e.stats || {};
+            return {
+              id: e.id,
+              stored: "idb",
+              key: e.key,
+              common: e.common && typeof e.common === "object" ? e.common : {},
+              stats: { n: Math.max(0, st.n | 0), open: Math.max(0, st.open | 0) },
+              imgs: Array.isArray(e.imgs) ? e.imgs.filter((id) => typeof id === "string") : [],
+            };
+          })
+          .filter(Boolean);
+        if (list.length) {
+          episodes = list;
+          if (list.some((e) => e.id === d.activeEp)) activeEp = d.activeEp;
+          else {
+            // 開いている話数が一覧に無い（壊れたデータ）。他の話数の項目を開いている話数として扱うと、
+            // 切り替えたときにその話数の中身を上書きしてしまうので、別の項目として足す
+            activeEp = newId("e");
+            episodes.push({ id: activeEp, stored: "main", common: d.common });
+          }
+        } else {
+          episodes = [{ id: newId("e") }];
+          activeEp = episodes[0].id;
         }
       }
       async function verifyStored() {
@@ -3808,8 +3816,8 @@
           return false;
         }
       }
-      async function initStorage() {
-        saveBlocked = "init";
+      // localStorage の保存データを読む。壊れていれば退避して block を返す。読めた形式は mode（v2〜v9 / legacy）
+      function readStored() {
         let raw = null,
           d = null,
           mode = "",
@@ -3829,13 +3837,7 @@
             } catch (e) {}
             block = "broken";
           } else if ((d.schemaVersion | 0) > SCHEMA) block = "newer";
-          else {
-            mode = "v" + Math.max(2, d.schemaVersion | 0);
-            applyDoc(d, "v2");
-            docRev = d.rev | 0;
-            loadToForm();
-            renderAll();
-          }
+          else mode = "v" + Math.max(2, d.schemaVersion | 0);
         } else {
           let rawOld = null;
           try {
@@ -3851,40 +3853,79 @@
             else mode = "legacy";
           }
         }
+        return { raw, d, mode, block };
+      }
+      // 開いている話数の画像を IndexedDB から読む。無くなっていた画像は外して知らせる
+      async function loadStoredImages() {
+        const ids = allImgIds();
+        let missing = [];
+        if (ids.length) {
+          const m = await idb.getMany("imgs", ids);
+          if (m) {
+            m.forEach((v, k) => {
+              IMG.set(k, v);
+              persistedImgs.add(k);
+            });
+            missing = ids.filter((id) => !m.has(id));
+          } else missing = ids;
+        }
+        if (missing.length) {
+          if (idb.db) {
+            const ms = new Set(missing);
+            cuts.forEach((c) =>
+              vers(c).forEach((v) => (v.images = (v.images || []).filter((id) => !ms.has(id)))),
+            );
+            dirty = true;
+          }
+          showBanner(
+            idb.db
+              ? `画像${missing.length}枚を復元できませんでした（保存が終わる前にページが閉じられた可能性があります）。お手元のJSON保存を読み込むと復元できます。`
+              : "画像の保存領域（IndexedDB）を開けないため画像を表示できません。ブラウザの設定（プライベートモード等）を確認してください。",
+            [],
+            "missing",
+          );
+        }
+      }
+      // 古い形式から読んだあと：更新前を退避し、新しい形式で保存して確かめ、お知らせを出す
+      async function finishMigration(mode, raw) {
+        const mig = MIGRATIONS[mode];
+        // 更新前のデータを退避（IndexedDB に置けば localStorage の容量を使わない。置けなければ localStorage）
+        if (mode !== "legacy" && raw != null) await saveBackup(KEY2 + mig.bak, raw);
+        dirty = true;
+        const ok = await flushSave(),
+          v = ok && (await verifyStored()),
+          n = allImgIds().length;
+        const msg =
+          mode === "legacy"
+            ? mig.msg(n)
+            : `${mig.msg(n)} 更新前のデータは ${KEY2}${mig.bak} として退避しています。` +
+              (mode !== "v8"
+                ? " あわせて、その後の版で増えた項目（作品・話数の切り替え・撮影テイクなど）にも対応する最新の形式にしました。"
+                : "");
+        showBanner(
+          v
+            ? msg
+            : "データを読み込みましたが、新しい保存形式への保存を確認できませんでした。更新前のデータは残しています。念のため「JSON保存」でバックアップしてください。",
+          [],
+          "migrated",
+        );
+      }
+      async function initStorage() {
+        saveBlocked = "init";
+        const { raw, d, mode, block } = readStored();
+        if (mode && mode !== "legacy") {
+          applyDoc(d, "v2");
+          docRev = d.rev | 0;
+          loadToForm();
+          renderAll();
+        }
         await idb.open();
         if (block) {
           blockSave(block);
           return;
         }
         if (mode && mode !== "legacy") {
-          const ids = allImgIds();
-          let missing = [];
-          if (ids.length) {
-            const m = await idb.getMany("imgs", ids);
-            if (m) {
-              m.forEach((v, k) => {
-                IMG.set(k, v);
-                persistedImgs.add(k);
-              });
-              missing = ids.filter((id) => !m.has(id));
-            } else missing = ids;
-          }
-          if (missing.length) {
-            if (idb.db) {
-              const ms = new Set(missing);
-              cuts.forEach((c) =>
-                vers(c).forEach((v) => (v.images = (v.images || []).filter((id) => !ms.has(id)))),
-              );
-              dirty = true;
-            }
-            showBanner(
-              idb.db
-                ? `画像${missing.length}枚を復元できませんでした（保存が終わる前にページが閉じられた可能性があります）。お手元のJSON保存を読み込むと復元できます。`
-                : "画像の保存領域（IndexedDB）を開けないため画像を表示できません。ブラウザの設定（プライベートモード等）を確認してください。",
-              [],
-              "missing",
-            );
-          }
+          await loadStoredImages();
           if (idb.db) {
             sweepImgs();
             sweepEps();
@@ -3897,29 +3938,8 @@
         resetImgSigs();
         loadToForm();
         renderAll();
-        const mig = MIGRATIONS[mode];
-        if (mig) {
-          // 更新前のデータを退避（IndexedDB に置けば localStorage の容量を使わない。置けなければ localStorage）
-          if (mode !== "legacy" && raw != null) await saveBackup(KEY2 + mig.bak, raw);
-          dirty = true;
-          const ok = await flushSave(),
-            v = ok && (await verifyStored()),
-            n = allImgIds().length;
-          const msg =
-            mode === "legacy"
-              ? mig.msg(n)
-              : `${mig.msg(n)} 更新前のデータは ${KEY2}${mig.bak} として退避しています。` +
-                (mode !== "v8"
-                  ? " あわせて、その後の版で増えた項目（作品・話数の切り替え・撮影テイクなど）にも対応する最新の形式にしました。"
-                  : "");
-          showBanner(
-            v
-              ? msg
-              : "データを読み込みましたが、新しい保存形式への保存を確認できませんでした。更新前のデータは残しています。念のため「JSON保存」でバックアップしてください。",
-            [],
-            "migrated",
-          );
-        } else if (dirty) flushSave();
+        if (MIGRATIONS[mode]) await finishMigration(mode, raw);
+        else if (dirty) flushSave();
         else setSaveState("idle", "自動保存：変更なし");
       }
       addEventListener("storage", (e) => {
