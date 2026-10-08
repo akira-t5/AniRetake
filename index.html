@@ -28,31 +28,27 @@
       }
       .app {
         display: grid;
-        grid-template-columns: 280px minmax(430px, 540px) 1fr;
+        grid-template-columns: 248px minmax(380px, 480px) minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
         height: 100vh;
         overflow: hidden;
       }
       .side,
       .form,
       .preview {
-        padding: 18px;
+        padding: 14px 16px;
         overflow: auto;
+        min-height: 0;
       }
       .side,
       .form {
         background: #fff;
         border-right: 1px solid var(--line);
       }
-      .brand {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        margin-bottom: 16px;
-      }
       .logo {
-        width: 36px;
-        height: 36px;
-        border-radius: 9px;
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
         background: var(--blueSoft);
         color: var(--blue);
         display: grid;
@@ -63,7 +59,6 @@
         font-size: 18px;
         margin: 0;
       }
-      .brand p,
       .hint {
         font-size: 11px;
         color: var(--sub);
@@ -135,13 +130,6 @@
         grid-template-columns: 1fr 1fr;
         gap: 8px;
         margin-bottom: 10px;
-      }
-      .search {
-        position: sticky;
-        top: 0;
-        background: #fff;
-        padding-bottom: 10px;
-        z-index: 2;
       }
       .cutList {
         display: flex;
@@ -586,30 +574,10 @@
         color: var(--green);
         margin-top: 8px;
       }
-      .side .btn {
-        padding: 9px 8px;
-        font-size: 12px;
-      }
-      .side .btnrow {
-        margin-bottom: 8px;
-      }
-      .side .status {
-        font-size: 11px;
-      }
       .ver {
         font-size: 11px;
         color: var(--sub);
         font-weight: 800;
-      }
-      .gearBtn {
-        border: 0;
-        background: none;
-        cursor: pointer;
-        font-size: 24px;
-        color: var(--sub);
-        padding: 0 4px;
-        vertical-align: 1px;
-        line-height: 1;
       }
       .modal {
         position: fixed;
@@ -694,12 +662,6 @@
         padding: 4px 8px;
         font-size: 12px;
       }
-      .app.inputOnly {
-        grid-template-columns: 280px 1fr;
-      }
-      .app.inputOnly .preview {
-        display: none;
-      }
       .settingsDanger {
         margin-top: 18px;
         padding-top: 14px;
@@ -715,18 +677,6 @@
         color: var(--red);
         background: #fff;
         border: 1px solid var(--red);
-      }
-      @media (max-width: 1100px) {
-        .app {
-          display: block;
-          height: auto;
-          overflow: auto;
-        }
-        .side,
-        .form {
-          border-right: 0;
-          border-bottom: 1px solid var(--line);
-        }
       }
       .labrow {
         display: flex;
@@ -757,38 +707,6 @@
         word-break: break-word;
         overflow-wrap: break-word;
         line-break: strict;
-      }
-      .side {
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-      .sideScroller {
-        flex: 1;
-        min-height: 0;
-        overflow: auto;
-      }
-      details.box summary {
-        font-size: 14px;
-        font-weight: 800;
-        margin: 0;
-        cursor: pointer;
-        list-style: none;
-        user-select: none;
-      }
-      details.box summary::-webkit-details-marker {
-        display: none;
-      }
-      details.box summary::after {
-        content: "▾";
-        float: right;
-        color: var(--sub);
-      }
-      details.box:not([open]) summary::after {
-        content: "▸";
-      }
-      details.box[open] summary {
-        margin: 0 0 10px;
       }
       .thumbWrap {
         display: flex;
@@ -1005,142 +923,650 @@
       .storeBanner button {
         margin: 8px 8px 0 0;
       }
+      /* レイアウト（v1.12.0）: 上部バーに共通情報と出力をまとめ、3列を作業に使う */
+      .topbar {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        gap: 10px 14px;
+        flex-wrap: wrap;
+        padding: 8px 14px;
+        background: #fff;
+        border-bottom: 1px solid var(--line);
+        position: relative;
+        z-index: 6;
+      }
+      .tbBrand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: none;
+      }
+      .tbBrand h1 {
+        font-size: 16px;
+        white-space: nowrap;
+      }
+      .tbCommon {
+        display: flex;
+        align-items: center;
+        gap: 6px 12px;
+        flex-wrap: wrap;
+        padding-left: 14px;
+        border-left: 1px solid var(--line);
+      }
+      label.tbField {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      .tbField .req {
+        margin-left: 1px;
+      }
+      .tbField input {
+        padding: 6px 8px;
+        font-weight: 800;
+      }
+      #code {
+        width: 92px;
+      }
+      #ep {
+        width: 58px;
+      }
+      #r {
+        width: 48px;
+      }
+      .topbar .status {
+        margin: 0 0 0 auto;
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 300px;
+      }
+      .tbActions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: none;
+      }
+      .topbar .btn {
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+      .iconBtn {
+        width: 34px;
+        height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--sub);
+        font-size: 17px;
+        font-weight: 800;
+        cursor: pointer;
+        line-height: 1;
+      }
+      .iconBtn:hover {
+        background: var(--soft);
+        color: var(--text);
+      }
+      details.menu {
+        position: relative;
+      }
+      details.menu > summary {
+        list-style: none;
+        user-select: none;
+        display: inline-block;
+      }
+      details.menu > summary::-webkit-details-marker {
+        display: none;
+      }
+      details.menu > summary::after {
+        content: " ▾";
+        color: var(--sub);
+      }
+      details.menu[open] > summary {
+        background: var(--blueSoft);
+        color: var(--blue);
+      }
+      .menuPanel {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 6px);
+        width: 250px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+        padding: 6px;
+        display: flex;
+        flex-direction: column;
+        z-index: 30;
+      }
+      .menuGroup {
+        font-size: 10.5px;
+        font-weight: 800;
+        color: var(--sub);
+        padding: 8px 10px 2px;
+      }
+      .menuItem {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1px;
+        border: 0;
+        background: none;
+        border-radius: 7px;
+        padding: 7px 10px;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 800;
+        color: var(--text);
+        text-align: left;
+        cursor: pointer;
+      }
+      .menuItem small {
+        font-size: 10.5px;
+        font-weight: 600;
+        color: var(--sub);
+      }
+      .menuItem:hover {
+        background: var(--soft2);
+      }
+      .menuItem.danger {
+        color: var(--red);
+      }
+      .menuItem.danger:hover {
+        background: #fff4f2;
+      }
+      .menuSep {
+        height: 1px;
+        background: var(--line);
+        margin: 6px 4px;
+      }
+      .side {
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        overflow: hidden;
+      }
+      .sideHead {
+        padding: 12px 12px 8px;
+        border-bottom: 1px solid var(--line);
+      }
+      #q {
+        padding: 8px 10px;
+        margin-bottom: 8px;
+      }
+      .side .btnrow {
+        margin-bottom: 6px;
+      }
+      .side .btn {
+        padding: 8px;
+        font-size: 13px;
+      }
+      .sideStats {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        margin-bottom: 2px;
+      }
+      .openCount {
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .side .dupToggle {
+        margin: 4px 0 0;
+        font-weight: 700;
+      }
+      .sideScroller {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        padding: 8px 10px 16px;
+      }
+      .cutList {
+        gap: 4px;
+      }
+      .cutCard {
+        padding: 7px 9px;
+        border-radius: 8px;
+      }
+      .cutCard:hover {
+        border-color: #cfcdc9;
+      }
+      .cutCard.active:hover {
+        border-color: var(--blue);
+      }
+      .cutTop {
+        align-items: center;
+      }
+      .cutMain {
+        flex: 1;
+        min-width: 0;
+      }
+      .cutNo {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        flex-wrap: wrap;
+        font-size: 15px;
+        line-height: 1.25;
+      }
+      .verN {
+        font-size: 10px;
+        font-weight: 800;
+        color: var(--sub);
+        background: var(--soft2);
+        border-radius: 999px;
+        padding: 1px 6px;
+      }
+      .cutCard .file {
+        margin-top: 1px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: normal;
+      }
+      .badge {
+        font-size: 10.5px;
+        font-weight: 800;
+        padding: 1px 6px;
+        white-space: nowrap;
+      }
+      .badge.pri-high {
+        color: #c0392b;
+        background: #fdecea;
+        border-color: #f5c6c0;
+      }
+      .badge.pri-maker {
+        color: #7b3fb0;
+        background: #f3ecfa;
+        border-color: #dccaf0;
+      }
+      .badge.pri-first {
+        color: #a0650a;
+        background: #fdf3e1;
+        border-color: #f2dbb0;
+      }
+      .cutCard .doneTick {
+        flex: none;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        max-width: 96px;
+        font-size: 11px;
+      }
+      .viewNote {
+        flex-basis: 100%;
+        text-align: right;
+        font-size: 10px;
+        color: var(--sub);
+      }
+      .work {
+        display: contents;
+      }
+      .form {
+        padding-top: 0;
+      }
+      .formHead {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        background: #fff;
+        margin: 0 -16px 12px;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .curWrap {
+        min-width: 0;
+      }
+      .curWrap .hint {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .tools {
+        flex: none;
+        gap: 6px;
+      }
+      .mini {
+        cursor: pointer;
+        color: var(--text);
+      }
+      .mini:hover:not(:disabled) {
+        background: var(--soft);
+      }
+      .mini:disabled,
+      .btn:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      .dangerText {
+        color: var(--red);
+      }
+      .form .field {
+        margin-bottom: 10px;
+      }
+      .form label {
+        margin-bottom: 4px;
+      }
+      .form input,
+      .form select,
+      .form textarea {
+        padding: 8px 10px;
+      }
+      .cutRow {
+        grid-template-columns: 1fr 1.2fr 0.8fr;
+      }
+      .verBox {
+        padding: 10px 12px;
+        margin-bottom: 12px;
+      }
+      .verRow {
+        display: grid;
+        grid-template-columns: minmax(120px, 1.2fr) 64px minmax(140px, 1.3fr);
+        gap: 8px;
+        align-items: end;
+      }
+      .verRow .field {
+        margin-bottom: 0;
+      }
+      .verActions .verDoneRow {
+        margin: 0;
+        padding: 6px 10px 6px 8px;
+        border: 1px solid #cfe6d9;
+        border-radius: 8px;
+        background: #f3faf6;
+      }
+      .verBtns {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        order: -1;
+        flex-basis: 100%;
+      }
+      .verActions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .verActions .hint {
+        flex: 1 1 160px;
+        margin: 0;
+      }
+      .labTools {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      #body {
+        min-height: 200px;
+      }
+      .instrInput {
+        min-height: 110px;
+      }
+      .noteInput {
+        min-height: 72px;
+      }
+      input:focus,
+      textarea:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px var(--blueSoft);
+      }
+      button:focus-visible,
+      summary:focus-visible {
+        outline: 2px solid var(--blue);
+        outline-offset: 2px;
+      }
+      .btn:hover:not(:disabled) {
+        filter: brightness(0.96);
+      }
+      .drop {
+        padding: 12px;
+        cursor: pointer;
+      }
+      .drop:hover {
+        border-color: var(--blue);
+        color: var(--blue);
+      }
+      .thumbs {
+        gap: 10px;
+      }
+      .thumb {
+        width: 96px;
+        height: 64px;
+        object-fit: contain;
+        background: var(--soft);
+      }
+      .thumbFrame {
+        position: relative;
+        line-height: 0;
+      }
+      .thumbBtn {
+        font-size: 11px;
+        padding: 2px 7px;
+      }
+      .thumbNo {
+        position: absolute;
+        left: 3px;
+        top: 3px;
+        font-size: 10px;
+        font-weight: 800;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.55);
+        border-radius: 4px;
+        padding: 0 4px;
+        line-height: 15px;
+      }
+      .thumbBtn.del {
+        color: var(--red);
+      }
+      .pvHead {
+        display: flex;
+        align-items: center;
+        gap: 6px 10px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+      .pvHead h2 {
+        margin: 0;
+        font-size: 13px;
+      }
+      .pvHead .filename {
+        margin: 0;
+        padding: 4px 10px;
+        font-size: 12px;
+      }
+      .pvHead .scaleNote {
+        margin: 0;
+        font-size: 11px;
+      }
+      .stage {
+        padding: 12px;
+        border-radius: 8px;
+      }
+      .app.inputOnly {
+        grid-template-columns: 248px minmax(0, 1fr);
+      }
+      /* 隠しても文字数の上限を測れるよう、画面外に置いたまま描画を続ける */
+      .app.inputOnly .preview {
+        position: fixed;
+        left: -20000px;
+        top: 0;
+        width: 1320px;
+        height: 960px;
+        visibility: hidden;
+        pointer-events: none;
+      }
+      .app.inputOnly .form > :not(.formHead) {
+        max-width: 900px;
+      }
+      /* 狭い画面: 一覧は左に残し、入力とプレビューを右の列で縦に並べる */
+      @media (max-width: 1180px) {
+        .app,
+        .app.inputOnly {
+          grid-template-columns: 220px minmax(0, 1fr);
+        }
+        .work {
+          display: block;
+          overflow: auto;
+          min-height: 0;
+          background: #f5f4f2;
+        }
+        .form {
+          overflow: visible;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+        .preview {
+          overflow: visible;
+        }
+        .tbLong,
+        .tbName {
+          display: none;
+        }
+        .topbar {
+          gap: 8px 10px;
+        }
+        .tbCommon {
+          padding-left: 10px;
+        }
+        .topbar .status {
+          flex: 1 1 60px;
+          min-width: 0;
+          text-align: right;
+        }
+      }
+      @media (max-width: 760px) {
+        .app,
+        .app.inputOnly {
+          display: block;
+          height: auto;
+          overflow: visible;
+        }
+        .side {
+          max-height: 55vh;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+        .work {
+          overflow: visible;
+        }
+        .cutRow,
+        .verRow {
+          grid-template-columns: 1fr 1fr;
+        }
+        .tbCommon {
+          border-left: 0;
+          padding-left: 0;
+        }
+      }
     </style>
   </head>
   <body>
     <div id="storeBanner" class="storeBanner" role="alert"></div>
     <div class="app">
-      <aside class="side">
-        <div class="brand">
+      <header class="topbar">
+        <div class="tbBrand">
           <div class="logo">A</div>
-          <div>
-            <h1>
-              AniRetake <span class="ver" id="appVer"></span>
-              <button class="gearBtn" id="settingsBtn" title="環境設定（担当工程）">⚙</button>
-              <button class="gearBtn" id="helpBtn" title="ヘルプ／バージョン情報">?</button>
-            </h1>
-            <p>カット別リテイク指示カード作成</p>
-          </div>
+          <h1><span class="tbName">AniRetake </span><span class="ver" id="appVer"></span></h1>
         </div>
-        <details class="box" id="outputBox" open>
-          <summary>出力・保存</summary>
-          <div class="btnrow">
-            <button class="btn primary" id="png" title="Ctrl/⌘+S">PNG書き出し</button
-            ><button class="btn secondary" id="allpng">全PNG</button>
-          </div>
-          <div class="btnrow">
-            <button class="btn secondary" id="txt">テキスト出力</button
-            ><button class="btn secondary" id="copy">コピー</button>
-          </div>
-          <div class="btnrow">
-            <button class="btn secondary" id="tsv" style="grid-column: 1/3">
-              表用TSV出力（A:番号 B:カット C:内容 D:兼用）
-            </button>
-          </div>
-          <div class="btnrow">
-            <button
-              class="btn secondary"
-              id="json"
-              title="画像データを含む全データを保存（別環境で再開可）"
-            >
-              JSON保存</button
-            ><button class="btn secondary" id="loadBtn">JSON読込</button>
-          </div>
-          <input id="load" type="file" accept="application/json" style="display: none" /><button
-            class="btn secondary"
-            id="reset"
-            style="width: 100%"
-          >
-            全リセット
-          </button>
-          <div class="status" id="save">自動保存：待機中</div>
-          <button class="small" id="copyStatus" style="width: 100%; margin-top: 8px">
-            状況をコピー
-          </button>
-        </details>
-        <div class="sideScroller">
-          <div class="search">
-            <div class="field">
-              <label>カット検索</label><input id="q" placeholder="例：000A / 高" />
+        <div class="tbCommon" aria-label="共通情報">
+          <label class="tbField"
+            ><span>作品コード<b class="req" title="必須">*</b></span><input id="code" value="AAA"
+          /></label>
+          <label class="tbField"
+            ><span>話数<b class="req" title="必須">*</b></span><input id="ep" value="00"
+          /></label>
+          <label
+            class="tbField"
+            title="新しいカットを追加したときの最初の版の回数です。各カットのR回数とリテイク日は「版」の欄で変更します。"
+            ><span><span class="tbLong">新規カットの</span>初期R</span><input id="r" value="1"
+          /></label>
+        </div>
+        <div class="status" id="save">自動保存：待機中</div>
+        <div class="tbActions">
+          <button class="btn primary" id="png" title="Ctrl/⌘+S">PNG書き出し</button
+          ><button class="btn secondary" id="allpng" title="全カットの最新版をZIPにまとめて書き出し">
+            全PNG</button
+          ><details class="menu" id="outputBox">
+            <summary class="btn secondary">出力・保存</summary>
+            <div class="menuPanel">
+              <div class="menuGroup">書き出し</div>
+              <button class="menuItem" id="txt">テキスト出力</button
+              ><button class="menuItem" id="copy">テキストをコピー</button
+              ><button class="menuItem" id="tsv">
+                表用TSV出力<small>A:番号 B:カット C:内容 D:兼用</small>
+              </button>
+              <div class="menuGroup">バックアップ</div>
+              <button
+                class="menuItem"
+                id="json"
+                title="画像データを含む全データを保存（別環境で再開可）"
+              >
+                JSON保存<small>画像を含む全データ</small></button
+              ><button class="menuItem" id="loadBtn">JSON読込</button>
+              <input id="load" type="file" accept="application/json" style="display: none" />
+              <div class="menuGroup">サポート</div>
+              <button class="menuItem" id="copyStatus">
+                状況をコピー<small>本文と画像は含みません</small>
+              </button>
+              <div class="menuSep"></div>
+              <button class="menuItem danger" id="reset">全リセット</button>
             </div>
-            <div class="btnrow">
-              <button class="btn primary" id="add" title="Ctrl/⌘+Enter">＋追加</button
-              ><button class="btn secondary" id="dup" title="Ctrl/⌘+D">複製</button>
-            </div>
+          </details>
+          <button class="iconBtn" id="settingsBtn" title="環境設定（用紙・ショートカット・担当工程）">
+            ⚙</button
+          ><button class="iconBtn" id="helpBtn" title="ヘルプ／バージョン情報">?</button>
+        </div>
+      </header>
+      <aside class="side">
+        <div class="sideHead">
+          <input id="q" placeholder="カット検索（例：000A / 高）" aria-label="カット検索" />
+          <div class="btnrow">
+            <button class="btn primary" id="add" title="Ctrl/⌘+Enter">＋追加</button
+            ><button class="btn secondary" id="dup" title="Ctrl/⌘+D">複製</button>
+          </div>
+          <div class="sideStats">
+            <div class="openCount" id="openCount"></div>
             <div class="hint" id="summary"></div>
-            <div class="hint" id="openCount"></div>
-            <label class="dupToggle"
-              ><input id="groupDup" type="checkbox" />同じカット番号をまとめて表示</label
-            ><label class="dupToggle"><input id="hideDone" type="checkbox" />作業済みを隠す</label>
           </div>
+          <label class="dupToggle"
+            ><input id="groupDup" type="checkbox" />同じカット番号をまとめて表示</label
+          ><label class="dupToggle"><input id="hideDone" type="checkbox" />作業済みを隠す</label>
+        </div>
+        <div class="sideScroller">
           <div id="list" class="cutList"></div>
         </div>
       </aside>
+      <div class="work">
       <section class="form">
-        <div class="brand">
-          <div class="logo">✎</div>
-          <div>
-            <h1>入力欄</h1>
-            <p>常時表示。選択中カットを編集</p>
-          </div>
-        </div>
-        <div class="box">
-          <h2>共通情報</h2>
-          <div class="grid4" style="grid-template-columns: 1fr 1fr 1fr">
-            <div class="field">
-              <label>作品コード <span class="req">必須</span></label
-              ><input id="code" value="AAA" />
-            </div>
-            <div class="field">
-              <label>話数 <span class="req">必須</span></label
-              ><input id="ep" value="00" />
-            </div>
-            <div class="field"><label>新規カットの初期R</label><input id="r" value="1" /></div>
-          </div>
-          <div class="hint">
-            初期Rは、新しいカットを追加したときの最初の版の回数です。各カットのR回数とリテイク日は下の「このカットの版」で変更します。
-          </div>
-        </div>
         <div class="formHead">
-          <div>
+          <div class="curWrap">
             <div class="current" id="current">---</div>
             <div class="hint" id="curFile"></div>
           </div>
           <div class="tools">
-            <button class="mini" id="prev" title="Ctrl/⌘+↑">前</button
-            ><button class="mini" id="next" title="Ctrl/⌘+↓">次</button
-            ><button class="mini" id="del">削除</button
+            <button class="mini" id="prev" title="Ctrl/⌘+↑">▲ 前</button
+            ><button class="mini" id="next" title="Ctrl/⌘+↓">▼ 次</button
+            ><button class="mini dangerText" id="del" title="このカットを全版ごと削除">削除</button
             ><button class="mini" id="togglePreview">入力だけ見る</button>
           </div>
         </div>
-        <div class="box" id="verBox">
-          <h2>このカットの版</h2>
-          <div class="grid4" style="grid-template-columns: 1fr 1fr 1fr">
-            <div class="field">
-              <label>表示する版</label
-              ><select id="verSel"></select>
-            </div>
-            <div class="field"><label>この版のR回数</label><input id="verR" value="1" /></div>
-            <div class="field"><label>リテイク日</label><input id="retakeDate" type="date" /></div>
-          </div>
-          <div class="btnrow" style="grid-template-columns: 1fr 1fr 1fr">
-            <button class="btn secondary" id="newVer">新しい版を作る</button
-            ><button class="btn secondary" id="copyVer">前の版から複製</button
-            ><button class="btn secondary" id="delVer">この版を削除</button>
-          </div>
-          <label class="doneTick verDoneRow"
-            ><input id="verDone" type="checkbox" />この版は作業済み</label
-          >
-          <div class="hint" id="verDoneNote"></div>
-        </div>
-        <div class="grid4" style="grid-template-columns: 1fr 1.2fr 0.8fr">
+        <div class="grid4 cutRow">
           <div class="field">
             <label>カット番号 <span class="req">必須</span></label
             ><input id="cut" placeholder="000A" />
           </div>
           <div class="field">
-            <label>兼用カット番号</label><input id="subcut" placeholder="000-000A_000" />
-            <div class="hint">ハイフンとアンダーバーが使えます</div>
+            <label title="ハイフンとアンダーバーが使えます">兼用カット番号</label
+            ><input id="subcut" placeholder="000-000A_000" title="ハイフンとアンダーバーが使えます" />
           </div>
           <div class="field">
             <label>優先度</label
@@ -1152,6 +1578,26 @@
             </select>
           </div>
         </div>
+        <div class="box verBox" id="verBox">
+          <div class="verRow">
+            <div class="field">
+              <label>版</label
+              ><select id="verSel"></select>
+            </div>
+            <div class="field verRField"><label>R回数</label><input id="verR" value="1" /></div>
+            <div class="field"><label>リテイク日</label><input id="retakeDate" type="date" /></div>
+          </div>
+          <div class="verActions">
+            <label class="doneTick verDoneRow"
+              ><input id="verDone" type="checkbox" />この版は作業済み</label
+            ><span class="verBtns"
+              ><button class="mini" id="newVer">＋ 新しい版を作る</button
+              ><button class="mini" id="copyVer">前の版から複製</button
+              ><button class="mini dangerText" id="delVer">この版を削除</button></span
+            >
+            <span class="hint" id="verDoneNote"></span>
+          </div>
+        </div>
         <div class="field">
           <div class="labrow">
             <label>リテイク内容 <span class="req">必須</span></label
@@ -1161,38 +1607,43 @@
         </div>
         <div class="field">
           <div class="labrow">
-            <label>修正内容</label
-            ><span style="display: flex; gap: 8px; align-items: center"
-              ><select id="instrColor" class="inlineSel">
+            <label
+              title="空でも欄は出します。色はこの版だけの設定です。以前の本文は自動では分割しません。"
+              >修正内容</label
+            ><span class="labTools"
+              ><select id="instrColor" class="inlineSel" title="修正内容の文字色（この版だけ）">
                 <option value="black">黒</option>
                 <option value="red">赤</option>
                 <option value="blue">青</option></select
               ><span class="charCount" id="instrCount" aria-live="polite"></span
             ></span>
           </div>
-          <textarea id="instr" style="min-height: 120px"></textarea>
-          <div class="hint">
-            空でも欄は出します。色はこの版だけの設定です。以前の本文は自動では分割しません。
-          </div>
+          <textarea id="instr" class="instrInput"></textarea>
         </div>
         <div class="field">
           <div class="labrow">
             <label>備考</label><span class="charCount" id="noteCount" aria-live="polite"></span>
           </div>
-          <textarea id="note" style="min-height: 96px"></textarea>
+          <textarea id="note" class="noteInput"></textarea>
         </div>
         <div class="field">
-          <label>参考画像</label>
-          <div id="drop" class="drop">画像をD＆D / クリックで複数追加</div>
+          <div class="labrow">
+            <label>参考画像</label
+            ><span class="hint">1枚目はカード、2枚目以降は別ページ</span>
+          </div>
+          <div id="drop" class="drop">
+            画像をドロップ／クリックで選択／<b>Ctrl+V</b> で貼り付け
+          </div>
           <input id="imgInput" type="file" accept="image/*" multiple style="display: none" />
           <div id="thumbs" class="thumbs"></div>
-          <div class="hint">1枚目はこの下。2枚目以降は別ページ。追加はD&Dか Ctrl+V。詳しくはヘルプ。</div>
         </div>
       </section>
       <main class="preview">
-        <h2>実寸比プレビュー</h2>
-        <div class="filename" id="fname"></div>
-        <div class="scaleNote" id="scaleNote"></div>
+        <div class="pvHead">
+          <h2>プレビュー</h2>
+          <div class="filename" id="fname"></div>
+          <div class="scaleNote" id="scaleNote"></div>
+        </div>
         <div class="stage">
           <section class="page" id="page">
             <div class="card">
@@ -1239,6 +1690,7 @@
           <div id="refPages"></div>
         </div>
       </main>
+      </div>
     </div>
     <div class="modal" id="settingsModal">
       <div class="dialog">
@@ -1326,7 +1778,7 @@
         KEY2 = "retake.v8",
         SCHEMA = 5,
         JSON_SCHEMA = 4;
-      const APP_VERSION = "1.11.0";
+      const APP_VERSION = "1.12.0";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -1889,6 +2341,7 @@
         el.dataset.state = st;
         el.style.color = st === "error" || st === "blocked" ? "var(--red)" : "";
         el.textContent = msg;
+        el.title = msg;
       }
       function snapshotDoc() {
         return {
@@ -2446,7 +2899,8 @@
           const viewing = c === cuts[selected] && verOf(c) !== latest;
           el.className =
             "cutCard " + (i === selected ? "active " : "") + (latestDone ? "isDone" : "");
-          el.innerHTML = `<div class="cutTop"><div><div class="cutNo">${dispName(c) || "未入力"}${vs.length > 1 ? ` · ${vs.length}版` : ""}</div><div class="file">${fname(c)}</div></div><span class="badge">${c.priority || "空白"}</span><label class="doneTick" title="最新の版の作業済み"><input type="checkbox" class="doneBox" ${latestDone ? "checked" : ""}>最新 ${rrLabel(latest.r)}${viewing ? " ※別の版を表示中" : ""}</label></div>`;
+          const priCls = { 高: "pri-high", メーカーR: "pri-maker", 優先: "pri-first" }[c.priority] || "";
+          el.innerHTML = `<div class="cutTop"><div class="cutMain"><div class="cutNo"><span>${dispName(c) || "未入力"}</span>${vs.length > 1 ? `<span class="verN">${vs.length}版</span>` : ""}${c.priority ? `<span class="badge ${priCls}">${c.priority}</span>` : ""}</div><div class="file" title="${fname(c)}">${fname(c)}</div></div><label class="doneTick" title="最新の版の作業済み"><input type="checkbox" class="doneBox" ${latestDone ? "checked" : ""}>最新 ${rrLabel(latest.r)}${viewing ? '<span class="viewNote"> ※別の版を表示中</span>' : ""}</label></div>`;
           const box = el.querySelector(".doneBox");
           box.addEventListener("click", (ev) => ev.stopPropagation());
           box.addEventListener("change", (ev) => {
@@ -2764,14 +3218,17 @@
       }
       function scalePreview() {
         let stage = document.querySelector(".stage");
-        let scale = Math.min(1, (stage.clientWidth - 60) / 1240);
-        stage.querySelectorAll(".page").forEach((p) => {
-          p.style.transform = `scale(${scale})`;
-          p.style.marginBottom = 874 * (scale - 1) + "px";
-        });
-        const _pp = paper();
-        $("scaleNote").textContent =
-          `${_pp.label} 出力：${_pp.w}×${_pp.h}px（${_pp.note}）/ プレビュー表示倍率 ${Math.round(scale * 100)}%`;
+        // 幅が取れないとき（非表示など）は倍率を変えない
+        if (stage.clientWidth) {
+          let scale = Math.min(1, (stage.clientWidth - 26) / 1240);
+          stage.querySelectorAll(".page").forEach((p) => {
+            p.style.transform = `scale(${scale})`;
+            p.style.marginBottom = 874 * (scale - 1) + "px";
+          });
+          const _pp = paper();
+          $("scaleNote").textContent =
+            `${_pp.label} 出力：${_pp.w}×${_pp.h}px（${_pp.note}）/ 表示 ${Math.round(scale * 100)}%`;
+        }
         refreshCharCounts();
       }
       function renderAll() {
@@ -2792,13 +3249,10 @@
           let img = document.createElement("img");
           img.className = "thumb";
           img.src = imgSrc(src);
-          img.title = "クリックで削除";
-          img.onclick = () => {
-            imgs.splice(i, 1);
-            renderThumbs();
-            renderPreview();
-            schedule();
-          };
+          img.title = i === 0 ? "1枚目（カードに載ります）" : `${i + 1}枚目（別ページ）`;
+          let no = document.createElement("span");
+          no.className = "thumbNo";
+          no.textContent = i + 1;
           let bar = document.createElement("div");
           bar.className = "thumbBar";
           let mk = (t, ti, dis, fn) => {
@@ -2832,7 +3286,19 @@
           bar.appendChild(
             mk("→", "他のカットへ移動・コピー", cuts.length < 2, () => openImgMove(i)),
           );
-          w.appendChild(img);
+          const del = mk("✕", "この画像を外す", false, () => {
+            imgs.splice(i, 1);
+            renderThumbs();
+            renderPreview();
+            schedule();
+          });
+          del.classList.add("del");
+          bar.appendChild(del);
+          let fr = document.createElement("div");
+          fr.className = "thumbFrame";
+          fr.appendChild(img);
+          fr.appendChild(no);
+          w.appendChild(fr);
           w.appendChild(bar);
           box.appendChild(w);
         });
@@ -3963,8 +4429,28 @@
         }
       };
       addEventListener("resize", scalePreview);
+      if (window.ResizeObserver) {
+        let stageW = -1;
+        new ResizeObserver((en) => {
+          const w = Math.round(en[0].contentRect.width);
+          if (w === stageW) return;
+          stageW = w;
+          scalePreview();
+        }).observe(document.querySelector(".stage"));
+      }
+      const outMenu = $("outputBox");
+      outMenu.querySelectorAll(".menuItem").forEach((b) =>
+        b.addEventListener("click", () => outMenu.removeAttribute("open")),
+      );
+      document.addEventListener("click", (e) => {
+        if (outMenu.open && !outMenu.contains(e.target)) outMenu.removeAttribute("open");
+      });
       document.addEventListener("keydown", (e) => {
         if (listeningFor) return;
+        if (e.key === "Escape" && $("outputBox").open) {
+          $("outputBox").removeAttribute("open");
+          return;
+        }
         if ($("imgMoveModal").classList.contains("show")) {
           if (e.key === "Escape") {
             e.preventDefault();
@@ -4001,7 +4487,7 @@
         document.title = APP_NAME + " v" + APP_VERSION + " - リテイク指示カード";
         $("helpTitle").textContent = APP_NAME + " バージョン " + APP_VERSION;
         $("helpBody").textContent =
-          `【${APP_NAME}】 バージョン ${APP_VERSION}\n\n■ 用途\nアニメ制作のリテイク指示カードを作成し、印刷・共有用PNGとして書き出します。\n\n■ 免責事項\n・本ソフトウェアは現状のまま提供され、動作や結果について一切の保証をしません。\n・本ソフトウェアの使用、または使用できなかったことによって生じた損害\n　（データの消失・破損、業務上の損失などを含みます）について、開発者は責任を負いません。\n・重要なデータを編集する前に、必ずバックアップ（JSON保存）を取ってください。\n・予告なく機能や仕様の変更、開発の終了を行う場合があります。\n\n■ 使用しているソフトウェア\n・ブラウザ標準 Web API（Canvas / FileReader / localStorage など）\n・追加の外部ライブラリはありません\n・ライセンス：MIT License\n\n■ ショートカット\n${SHORTCUT_ACTIONS.map((a) => "・" + formatShortcut(prefs.shortcuts[a.id]) + " … " + a.label).join("\n")}\n\n■ 版（R回数）\nカットごとに過去の版を残せます。「新しい版を作る」で次のRが空で追加されます。Rの数字を直しても新しい版は増えません。\n全PNG・テキスト・TSVは各カットの最新版（Rが一番大きい版）を出します。画面のPNGは表示中の版です。\n\n■ 修正内容\nリテイク内容とは別の欄です。版ごとに保存し、文字色（黒・赤・青）も版ごとに選べます。空でもカードに欄を出します。\n参考画像は1枚目だけを修正内容の下に出し、2枚目以降は別ページ（1ページ4枚・左上から）です。\n優先度はカード見出しの左端に出します。\n各版に「作業済み」を付けられます。入力欄のチェックは今見ている版、一覧のチェックは最新の版です。印刷用のカードには出しません。\n「入力だけ見る」でプレビューを隠せます。\n\n■ 版の操作\n「新しい版を作る」は最大Rの次を空で追加します。Rの数字を直しても新しい版は増えません。同じカットに同じRは持てません。最後の1版は削除できません。カットの削除は全版を消します。\n\n■ 参考画像\n1枚目だけを修正内容の下に出します。2枚目以降は別ページ（1ページ最大4枚、左上から）です。追加はD&DまたはCtrl+V。サムネイルの→で他のカットへ移動・コピー、◀▶で順序変更です。\n「状況をコピー」は、版番号・カット数・画像の枚数・保存状態だけをコピーします。本文と画像そのものは含みません。\n\n■ データの保存場所\nテキスト・設定は localStorage キー：${KEY2}\n画像は IndexedDB（ブラウザ内・大容量）に1枚ずつ保存\n旧形式のデータ（${KEY}）は移行後もバックアップとして残しています\n（サイトごと。GitHub Pages とローカルファイルでは別データになります）\n\n■ サポート・公式情報\nFANBOX：https://akira0w0.fanbox.cc/\nX（旧Twitter）：https://x.com/Akira_0m0_\nGitHub：https://github.com/akira-t5/AniRetake\n変更履歴：https://github.com/akira-t5/AniRetake/blob/main/CHANGELOG.md\n\n(c) 2026 アキラ`;
+          `【${APP_NAME}】 バージョン ${APP_VERSION}\n\n■ 用途\nアニメ制作のリテイク指示カードを作成し、印刷・共有用PNGとして書き出します。\n\n■ 免責事項\n・本ソフトウェアは現状のまま提供され、動作や結果について一切の保証をしません。\n・本ソフトウェアの使用、または使用できなかったことによって生じた損害\n　（データの消失・破損、業務上の損失などを含みます）について、開発者は責任を負いません。\n・重要なデータを編集する前に、必ずバックアップ（JSON保存）を取ってください。\n・予告なく機能や仕様の変更、開発の終了を行う場合があります。\n\n■ 使用しているソフトウェア\n・ブラウザ標準 Web API（Canvas / FileReader / localStorage など）\n・追加の外部ライブラリはありません\n・ライセンス：MIT License\n\n■ ショートカット\n${SHORTCUT_ACTIONS.map((a) => "・" + formatShortcut(prefs.shortcuts[a.id]) + " … " + a.label).join("\n")}\n\n■ 版（R回数）\nカットごとに過去の版を残せます。「新しい版を作る」で次のRが空で追加されます。Rの数字を直しても新しい版は増えません。\n全PNG・テキスト・TSVは各カットの最新版（Rが一番大きい版）を出します。画面のPNGは表示中の版です。\n\n■ 修正内容\nリテイク内容とは別の欄です。版ごとに保存し、文字色（黒・赤・青）も版ごとに選べます。空でもカードに欄を出します。\n参考画像は1枚目だけを修正内容の下に出し、2枚目以降は別ページ（1ページ4枚・左上から）です。\n優先度はカード見出しの左端に出します。\n各版に「作業済み」を付けられます。入力欄のチェックは今見ている版、一覧のチェックは最新の版です。印刷用のカードには出しません。\n「入力だけ見る」でプレビューを隠せます。\n\n■ 画面の配置\n上部バーに作品コード・話数・初期R、保存状態、PNG書き出し・全PNG・「出力・保存」メニュー（テキスト・TSV・JSON・状況をコピー・全リセット）、環境設定、ヘルプがあります。\n左はカット一覧、中央は入力欄、右はプレビューです。画面が狭いときはプレビューが入力欄の下に移ります。\n\n■ 版の操作\n「新しい版を作る」は最大Rの次を空で追加します。Rの数字を直しても新しい版は増えません。同じカットに同じRは持てません。最後の1版は削除できません。カットの削除は全版を消します。\n\n■ 参考画像\n1枚目だけを修正内容の下に出します。2枚目以降は別ページ（1ページ最大4枚、左上から）です。追加はD&DまたはCtrl+V。サムネイルの→で他のカットへ移動・コピー、◀▶で順序変更、✕で外します（画像のクリックでは消えません）。\n「状況をコピー」は、版番号・カット数・画像の枚数・保存状態だけをコピーします。本文と画像そのものは含みません。\n\n■ データの保存場所\nテキスト・設定は localStorage キー：${KEY2}\n画像は IndexedDB（ブラウザ内・大容量）に1枚ずつ保存\n旧形式のデータ（${KEY}）は移行後もバックアップとして残しています\n（サイトごと。GitHub Pages とローカルファイルでは別データになります）\n\n■ サポート・公式情報\nFANBOX：https://akira0w0.fanbox.cc/\nX（旧Twitter）：https://x.com/Akira_0m0_\nGitHub：https://github.com/akira-t5/AniRetake\n変更履歴：https://github.com/akira-t5/AniRetake/blob/main/CHANGELOG.md\n\n(c) 2026 アキラ`;
       }
       $("helpBtn").onclick = () => {
         fillHelp();
@@ -4022,6 +4508,7 @@
       $("togglePreview").onclick = () => {
         prefs.inputOnly = !prefs.inputOnly;
         applyInputOnly();
+        scalePreview();
         schedule();
       };
       applyInputOnly();
