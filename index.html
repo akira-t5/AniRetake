@@ -2343,7 +2343,7 @@
         KEY2 = "retake.v8",
         SCHEMA = 7,
         JSON_SCHEMA = 4;
-      const APP_VERSION = "1.19.0";
+      const APP_VERSION = "1.20.0";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -3233,6 +3233,9 @@
           prefs.inputOnly = !!d.prefs.inputOnly;
           applyInputOnly();
           if (Array.isArray(d.prefs.matLabels)) prefs.matLabels = cleanMatLabels(d.prefs.matLabels);
+          // 番号はこのブラウザでの回数。JSON読込では引き継がない（同じ日に番号が重ならないように）
+          if (mode !== "json" && d.prefs.jsonSeq && typeof d.prefs.jsonSeq === "object")
+            prefs.jsonSeq = d.prefs.jsonSeq;
           if (/^\d{4}-\d{2}-\d{2}$/.test(d.prefs.lastRetakeDate || ""))
             prefs.lastRetakeDate = d.prefs.lastRetakeDate;
           else delete prefs.lastRetakeDate;
@@ -5081,10 +5084,28 @@
           "text/tab-separated-values;charset=utf-8",
         );
       };
+      // JSON保存のファイル名: retake_draft_作品_話数_YYYYMMDD_01.json
+      // 番号は作品・話数ごとに、その日にこのアプリで保存した回数（日付が変わると 01 に戻る）
+      function jsonFileName() {
+        const c = common(),
+          base = `${c.code || "work"}_${c.ep || "ep"}`,
+          d = new Date(),
+          ymd =
+            d.getFullYear() +
+            String(d.getMonth() + 1).padStart(2, "0") +
+            String(d.getDate()).padStart(2, "0");
+        const seqs = prefs.jsonSeq && typeof prefs.jsonSeq === "object" ? prefs.jsonSeq : {};
+        const last = seqs[base];
+        const n = last && last.date === ymd ? (last.n | 0) + 1 : 1;
+        seqs[base] = { date: ymd, n };
+        prefs.jsonSeq = seqs;
+        schedule();
+        return `retake_draft_${base}_${ymd}_${String(n).padStart(2, "0")}.json`;
+      }
       $("json").onclick = async () => {
         await waitImgs();
         download(
-          `retake_draft_${common().code || "work"}_${common().ep || "ep"}.json`,
+          jsonFileName(),
           JSON.stringify(
             {
               schemaVersion: JSON_SCHEMA,
