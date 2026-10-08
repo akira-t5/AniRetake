@@ -2481,7 +2481,7 @@
         KEY2 = "retake.v8",
         SCHEMA = 8,
         JSON_SCHEMA = 4;
-      const APP_VERSION = "1.21.0";
+      const APP_VERSION = "1.21.1";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -2552,6 +2552,17 @@
           .replace(/[^0-9A-Z\-_]/g, "")
           .replace(/--+/g, "-");
       const cleanNum = (v) => (v || "").replace(/[^0-9]/g, "");
+      // 画面に文字列を組み込むときは必ず通す（読み込んだJSONの文字列がタグとして動かないように）
+      const escHtml = (v) =>
+        String(v == null ? "" : v).replace(
+          /[&<>"']/g,
+          (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+        );
+      const PRIORITIES = ["", "高", "メーカーR", "優先"];
+      // 画像として受け付ける形（data:種類;base64,…）。本体が base64 の文字だけでできていれば
+      // 引用符やタグは入り得ない。これ以外の文字列は画像として扱わない
+      const isImageDataUrl = (v) =>
+        typeof v === "string" && /^data:[a-z0-9.+/-]*;base64,[A-Za-z0-9+/=\s]*$/i.test(v);
       function fmtDate(v) {
         if (!v) return "";
         let p = v.split("-");
@@ -2850,7 +2861,7 @@
           );
         if (sc.alt) chips.push('<kbd class="kbd">Alt</kbd>');
         if (sc.shift) chips.push('<kbd class="kbd">Shift</kbd>');
-        chips.push(`<kbd class="kbd kbdMain">${shortcutKeyLabel(sc.key)}</kbd>`);
+        chips.push(`<kbd class="kbd kbdMain">${escHtml(shortcutKeyLabel(sc.key))}</kbd>`);
         return `<span class="kbdCombo">${chips.join('<span class="kbdPlus">+</span>')}</span>`;
       }
       function matchShortcut(e, sc) {
@@ -3437,6 +3448,11 @@
           if (typeof layoutColumns === "function") layoutColumns();
           if (typeof syncFitButtons === "function") syncFitButtons();
           if (d.prefs.shortcuts && typeof d.prefs.shortcuts === "object")
+            Object.keys(d.prefs.shortcuts).forEach((k) => {
+              const sc = d.prefs.shortcuts[k];
+              if (!sc || typeof sc.key !== "string" || sc.key.length > 20) delete d.prefs.shortcuts[k];
+            });
+          if (d.prefs.shortcuts && typeof d.prefs.shortcuts === "object")
             prefs.shortcuts = {
               ...JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS)),
               ...d.prefs.shortcuts,
@@ -3452,7 +3468,7 @@
             c = c || {};
             let id = typeof c.id === "string" && c.id && !seen.has(c.id) ? c.id : newId("c");
             seen.add(id);
-            const pri = c.priority === "通常" ? "" : c.priority || "";
+            const pri = PRIORITIES.includes(c.priority) ? c.priority : "";
             const takeImgs = (arr, pos) => {
               if (asIds) return (arr || []).filter((x) => typeof x === "string");
               const raw =
@@ -3461,7 +3477,7 @@
                   : oldImgs && Array.isArray(oldImgs[pos])
                     ? oldImgs[pos]
                     : []) || [];
-              return raw.filter((x) => typeof x === "string" && x.startsWith("data:")).map(regImg);
+              return raw.filter(isImageDataUrl).map(regImg);
             };
             if (Array.isArray(c.versions) && c.versions.length) {
               const versions = [];
@@ -3704,7 +3720,7 @@
               : mode === "v7"
                 ? `撮影テイク（本撮・T撮・線撮）の記録に対応する形式へ更新しました（${cuts.length}カット）。これまでの版は未設定のままです。更新前のデータは ${KEY2}.s7 に残しています。`
               : mode === "v6"
-                ? `作品・話数の切り替えに対応する形式へ更新しました（${cuts.length}カット）。今のデータは「${epLabel(captureActive())}」として残っています。更新前のデータは ${KEY2}.s6 に残しています。`
+                ? `作品・話数の切り替えに対応する形式へ更新しました（${cuts.length}カット）。今のデータは「${escHtml(epLabel(captureActive()))}」として残っています。更新前のデータは ${KEY2}.s6 に残しています。`
               : mode === "v5"
                 ? `撮入れ素材のチェックに対応する形式へ更新しました（${cuts.length}カット）。これまでの版はチェックなしのままです。更新前のデータは ${KEY2}.s5 に残しています。`
               : mode === "v4"
@@ -3812,7 +3828,7 @@
           el.className =
             "cutCard " + (i === selected ? "active " : "") + (latestDone ? "isDone" : "");
           const priCls = { 高: "pri-high", メーカーR: "pri-maker", 優先: "pri-first" }[c.priority] || "";
-          el.innerHTML = `<div class="cutTop"><div class="cutMain"><div class="cutNo"><span class="cutName" title="${dispName(c) || "未入力"}">${dispName(c) || "未入力"}</span>${vs.length > 1 ? `<span class="verN">${vs.length}版</span>` : ""}${c.priority ? `<span class="badge ${priCls}">${c.priority}</span>` : ""}</div><div class="file" title="${fname(c)}">${fname(c)}</div></div><label class="doneTick" title="最新の版の作業済み"><input type="checkbox" class="doneBox" ${latestDone ? "checked" : ""}>最新 ${rrLabel(latest.r)}${viewing ? '<span class="viewNote"> ※別の版を表示中</span>' : ""}</label></div>`;
+          el.innerHTML = `<div class="cutTop"><div class="cutMain"><div class="cutNo"><span class="cutName" title="${escHtml(dispName(c) || "未入力")}">${escHtml(dispName(c) || "未入力")}</span>${vs.length > 1 ? `<span class="verN">${vs.length}版</span>` : ""}${c.priority ? `<span class="badge ${priCls}">${escHtml(c.priority)}</span>` : ""}</div><div class="file" title="${escHtml(fname(c))}">${escHtml(fname(c))}</div></div><label class="doneTick" title="最新の版の作業済み"><input type="checkbox" class="doneBox" ${latestDone ? "checked" : ""}>最新 ${rrLabel(latest.r)}${viewing ? '<span class="viewNote"> ※別の版を表示中</span>' : ""}</label></div>`;
           const box = el.querySelector(".doneBox");
           box.addEventListener("click", (ev) => ev.stopPropagation());
           box.addEventListener("change", (ev) => {
@@ -3963,7 +3979,7 @@
           nos = cleanTakeNo(v && v.takeNo);
         return TAKE_TYPES.map(
           (t) =>
-            `<div class="takeRow"><span class="takeLabel${sel === t.code ? " on" : ""}">${t.label}</span><span class="takeNo">${takeCodeText(t.code, nos[t.code])}</span></div>`,
+            `<div class="takeRow"><span class="takeLabel${sel === t.code ? " on" : ""}">${escHtml(t.label)}</span><span class="takeNo">${escHtml(takeCodeText(t.code, nos[t.code]))}</span></div>`,
         ).join("");
       }
       function renderMatBox(v) {
@@ -4177,7 +4193,7 @@
         processes.forEach((p) => {
           let row = document.createElement("div");
           row.className = "procRow";
-          row.innerHTML = `<div class="procName">${p.name}</div><div class="procStamp">${p.date ? fmtShort(p.date) : "/"}</div>`;
+          row.innerHTML = `<div class="procName">${escHtml(p.name)}</div><div class="procStamp">${escHtml(p.date ? fmtShort(p.date) : "/")}</div>`;
           box.appendChild(row);
         });
       }
@@ -4236,7 +4252,7 @@
         imgs.forEach((src) => {
           let d = document.createElement("div");
           d.className = "imagePh hasImg";
-          d.innerHTML = `<img src="${imgSrc(src)}">`;
+          d.innerHTML = `<img src="${escHtml(imgSrc(src))}">`;
           box.appendChild(d);
         });
       }
@@ -4266,7 +4282,7 @@
           const sec = document.createElement("section");
           sec.className = "page";
           sec.style.marginTop = "24px";
-          sec.innerHTML = `<div class="card ref"><header class="hrow"><div class="hcell titleCell"><div class="hpri">${priLabel(c)}</div><div class="htitle"><span class="hcode"></span><span class="hken"></span></div></div><div class="hcell hrCell"><div class="hrMain"><div class="hsub">リテイク</div><span class="hr"></span></div><div class="takeBox">${takeBoxHtml(v)}</div></div><div class="hcell hsplit"><div class="hdateRow"><span class="hsub">リテイク日</span><span class="hslash hdate"></span></div><div class="hdateRow"><span class="hsub">撮入れ日</span><span class="hslash hshoot"></span></div></div></header><div class="srow" style="grid-template-columns:1fr"><div class="scell">参考画像（${p + 2}枚目）</div></div><div class="refBody"><div class="refGrid${one ? " one" : ""}">${chunk.map((src, i) => `<div class="refPh hasImg"${one ? ' style="grid-row:1 / span 2"' : ""}><img src="${imgSrc(src)}" alt=""></div>`).join("")}</div></div></div>`;
+          sec.innerHTML = `<div class="card ref"><header class="hrow"><div class="hcell titleCell"><div class="hpri">${escHtml(priLabel(c))}</div><div class="htitle"><span class="hcode"></span><span class="hken"></span></div></div><div class="hcell hrCell"><div class="hrMain"><div class="hsub">リテイク</div><span class="hr"></span></div><div class="takeBox">${takeBoxHtml(v)}</div></div><div class="hcell hsplit"><div class="hdateRow"><span class="hsub">リテイク日</span><span class="hslash hdate"></span></div><div class="hdateRow"><span class="hsub">撮入れ日</span><span class="hslash hshoot"></span></div></div></header><div class="srow" style="grid-template-columns:1fr"><div class="scell">参考画像（${p + 2}枚目）</div></div><div class="refBody"><div class="refGrid${one ? " one" : ""}">${chunk.map((src, i) => `<div class="refPh hasImg"${one ? ' style="grid-row:1 / span 2"' : ""}><img src="${escHtml(imgSrc(src))}" alt=""></div>`).join("")}</div></div></div>`;
           sec.querySelector(".hcode").textContent = mainTitle(c);
           sec.querySelector(".hken").textContent = kenTitle(c) ? " " + kenTitle(c) : "";
           sec.querySelector(".hr").textContent = cm.rr;
@@ -5713,7 +5729,7 @@
         processes.forEach((p, i) => {
           let row = document.createElement("div");
           row.className = "processRow";
-          row.innerHTML = `<input value="${p.name}" data-pi="${i}"><input type="date" value="${p.date || ""}" data-date="${i}"><button class="small" data-up="${i}" ${i === 0 ? "disabled" : ""}>↑</button><button class="small" data-down="${i}" ${i === processes.length - 1 ? "disabled" : ""}>↓</button><button class="small danger" data-rm="${i}">削除</button>`;
+          row.innerHTML = `<input value="${escHtml(p.name)}" data-pi="${i}"><input type="date" value="${escHtml(p.date || "")}" data-date="${i}"><button class="small" data-up="${i}" ${i === 0 ? "disabled" : ""}>↑</button><button class="small" data-down="${i}" ${i === processes.length - 1 ? "disabled" : ""}>↓</button><button class="small danger" data-rm="${i}">削除</button>`;
           box.appendChild(row);
         });
         box.querySelectorAll("[data-pi]").forEach(
