@@ -2343,7 +2343,7 @@
         KEY2 = "retake.v8",
         SCHEMA = 7,
         JSON_SCHEMA = 4;
-      const APP_VERSION = "1.20.1";
+      const APP_VERSION = "1.20.2";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -3072,8 +3072,13 @@
           return false;
         }
         overrideOnce = false;
+        // 開いていない話数の画像も対象にする（画像を足した直後に話数を切り替えても失わないように）
         const need = [
-          ...new Set(doc.cuts.flatMap((c) => (c.versions || []).flatMap((v) => v.images || []))),
+          ...new Set(
+            (doc.episodes || [doc]).flatMap((ep) =>
+              (ep.cuts || []).flatMap((c) => (c.versions || []).flatMap((v) => v.images || [])),
+            ),
+          ),
         ].filter((id) => !persistedImgs.has(id) && IMG.has(id));
         if (need.length) {
           if (
@@ -5186,7 +5191,18 @@
             nc = String(d.common?.code || "").toUpperCase(),
             ne = String(d.common?.ep || "");
           const hasContent = cuts.some(
-            (c) => c.cut || vers(c).some((v) => v.body || (v.images || []).length),
+            (c) =>
+              c.cut ||
+              c.subcut ||
+              vers(c).some(
+                (v) =>
+                  v.body ||
+                  v.instr ||
+                  v.note ||
+                  (v.images || []).length ||
+                  (v.mats || []).length ||
+                  cleanMatR(v.matR).some(Boolean),
+              ),
           );
           const sameAsCur = cc.code === nc && cc.ep === ne;
           const other = episodes.find((x) => {
@@ -5778,7 +5794,18 @@
       $("epNew").onclick = async () => {
         $("epMenu").removeAttribute("open");
         const c = common();
-        await addEpisode(c.code, nextEpNo(c.ep));
+        // 同じ作品で使われていない次の話数を選ぶ（05 から作っても 06 があれば 07）
+        const used = new Set(
+          episodes
+            .filter((e) => e.id !== activeEp)
+            .map((e) => e.common || {})
+            .filter((x) => String(x.code || "").toUpperCase() === c.code)
+            .map((x) => String(x.ep || "")),
+        );
+        used.add(c.ep);
+        let ep = nextEpNo(c.ep);
+        for (let i = 0; ep && used.has(ep) && i < 1000; i++) ep = nextEpNo(ep);
+        await addEpisode(c.code, ep);
         $("ep").focus();
         $("ep").select();
       };
