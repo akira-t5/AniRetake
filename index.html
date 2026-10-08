@@ -33,7 +33,8 @@
       }
       .app {
         display: grid;
-        grid-template-columns: 248px minmax(380px, 480px) minmax(0, 1fr);
+        /* 列幅: 一覧 / 入力欄（余りを使う）/ プレビュー（カードが収まる幅。JS が --pvW を決める） */
+        grid-template-columns: var(--sideW, 248px) minmax(360px, 1fr) var(--pvW, minmax(0, 1.4fr));
         grid-template-rows: auto minmax(0, 1fr);
         height: 100vh;
         overflow: hidden;
@@ -1548,7 +1549,90 @@
         border-radius: 8px;
       }
       .app.inputOnly {
-        grid-template-columns: 248px minmax(0, 1fr);
+        grid-template-columns: var(--sideW, 248px) minmax(0, 1fr);
+      }
+      .side {
+        grid-row: 2;
+        grid-column: 1;
+      }
+      .form {
+        grid-row: 2;
+        grid-column: 2;
+      }
+      .preview {
+        grid-row: 2;
+        grid-column: 3;
+      }
+      /* 列の境目（ドラッグで幅を変える。ダブルクリックで自動に戻す） */
+      .splitter {
+        grid-row: 2;
+        justify-self: start;
+        width: 8px;
+        margin-left: -4px;
+        z-index: 4;
+        cursor: col-resize;
+        position: relative;
+      }
+      .splitter::after {
+        content: "";
+        position: absolute;
+        left: 3px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: transparent;
+        transition: background 0.15s;
+      }
+      .splitter:hover::after,
+      .splitter.dragging::after {
+        background: var(--blue);
+      }
+      #splitL {
+        grid-column: 2;
+      }
+      #splitR {
+        grid-column: 3;
+      }
+      .app.inputOnly #splitR {
+        display: none;
+      }
+      body.resizing,
+      body.resizing * {
+        cursor: col-resize !important;
+        user-select: none !important;
+      }
+      .fitSeg {
+        display: inline-flex;
+        margin-left: auto;
+      }
+      .fitSeg .mini {
+        border-radius: 0;
+        padding: 5px 8px;
+        font-size: 11.5px;
+      }
+      .fitSeg .mini:first-child {
+        border-radius: 8px 0 0 8px;
+      }
+      .fitSeg .mini:last-child {
+        border-radius: 0 8px 8px 0;
+      }
+      .fitSeg .mini + .mini {
+        margin-left: -1px;
+      }
+      .fitSeg .mini.on {
+        background: var(--blue);
+        border-color: var(--blue);
+        color: #fff;
+      }
+      .pvHead .pvZoomBtn {
+        margin-left: 6px;
+      }
+      .cutNo .cutName {
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       /* 隠しても文字数の上限を測れるよう、画面外に置いたまま描画を続ける */
       .app.inputOnly .preview {
@@ -1766,6 +1850,13 @@
         .tbName {
           display: none;
         }
+        .splitter {
+          display: none;
+        }
+        .work {
+          grid-row: 2;
+          grid-column: 2;
+        }
         /* 狭い画面は「入力」「プレビュー」のタブで切り替える */
         .viewTabs {
           display: inline-flex;
@@ -1934,6 +2025,8 @@
           ></div>
         </div>
       </aside>
+      <div class="splitter" id="splitL" title="ドラッグで一覧の幅を変更（ダブルクリックで元に戻す）"></div>
+      <div class="splitter" id="splitR" title="ドラッグでプレビューの幅を変更（ダブルクリックで自動に戻す）"></div>
       <div class="work">
       <section class="form">
         <div class="formHead">
@@ -2049,7 +2142,11 @@
           <h2>プレビュー</h2>
           <div class="filename" id="fname"></div>
           <div class="scaleNote" id="scaleNote"></div>
-          <button class="mini pvZoomBtn" id="pvZoom" title="プレビューを画面いっぱいに表示（もう一度押すか Esc で戻る）">
+          <span class="fitSeg" role="group" aria-label="プレビューの大きさ"
+            ><button class="mini" data-fit="fit" title="カード全体が画面に収まる大きさ（最大100%）">全体</button
+            ><button class="mini" data-fit="width" title="プレビュー欄の幅に合わせる（最大100%）">幅</button
+            ><button class="mini" data-fit="100" title="実寸（設計サイズ 1240×874）">100%</button></span
+          ><button class="mini pvZoomBtn" id="pvZoom" title="プレビューを画面いっぱいに表示（もう一度押すか Esc で戻る）">
             拡大
           </button>
         </div>
@@ -2205,7 +2302,7 @@
         KEY2 = "retake.v8",
         SCHEMA = 6,
         JSON_SCHEMA = 4;
-      const APP_VERSION = "1.16.0";
+      const APP_VERSION = "1.17.0";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -3059,6 +3156,13 @@
           prefs.inputOnly = !!d.prefs.inputOnly;
           applyInputOnly();
           if (Array.isArray(d.prefs.matLabels)) prefs.matLabels = cleanMatLabels(d.prefs.matLabels);
+          prefs.pvFit = ["fit", "width", "100"].includes(d.prefs.pvFit) ? d.prefs.pvFit : "fit";
+          if (d.prefs.sideW > 0) prefs.sideW = d.prefs.sideW | 0;
+          else delete prefs.sideW;
+          if (d.prefs.pvW > 0) prefs.pvW = d.prefs.pvW | 0;
+          else delete prefs.pvW;
+          if (typeof layoutColumns === "function") layoutColumns();
+          if (typeof syncFitButtons === "function") syncFitButtons();
           if (d.prefs.shortcuts && typeof d.prefs.shortcuts === "object")
             prefs.shortcuts = {
               ...JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS)),
@@ -3389,7 +3493,7 @@
           el.className =
             "cutCard " + (i === selected ? "active " : "") + (latestDone ? "isDone" : "");
           const priCls = { 高: "pri-high", メーカーR: "pri-maker", 優先: "pri-first" }[c.priority] || "";
-          el.innerHTML = `<div class="cutTop"><div class="cutMain"><div class="cutNo"><span>${dispName(c) || "未入力"}</span>${vs.length > 1 ? `<span class="verN">${vs.length}版</span>` : ""}${c.priority ? `<span class="badge ${priCls}">${c.priority}</span>` : ""}</div><div class="file" title="${fname(c)}">${fname(c)}</div></div><label class="doneTick" title="最新の版の作業済み"><input type="checkbox" class="doneBox" ${latestDone ? "checked" : ""}>最新 ${rrLabel(latest.r)}${viewing ? '<span class="viewNote"> ※別の版を表示中</span>' : ""}</label></div>`;
+          el.innerHTML = `<div class="cutTop"><div class="cutMain"><div class="cutNo"><span class="cutName" title="${dispName(c) || "未入力"}">${dispName(c) || "未入力"}</span>${vs.length > 1 ? `<span class="verN">${vs.length}版</span>` : ""}${c.priority ? `<span class="badge ${priCls}">${c.priority}</span>` : ""}</div><div class="file" title="${fname(c)}">${fname(c)}</div></div><label class="doneTick" title="最新の版の作業済み"><input type="checkbox" class="doneBox" ${latestDone ? "checked" : ""}>最新 ${rrLabel(latest.r)}${viewing ? '<span class="viewNote"> ※別の版を表示中</span>' : ""}</label></div>`;
           const box = el.querySelector(".doneBox");
           box.addEventListener("click", (ev) => ev.stopPropagation());
           box.addEventListener("change", (ev) => {
@@ -3515,6 +3619,7 @@
         on = !!on && getComputedStyle(document.querySelector(".preview")).visibility !== "hidden";
         document.querySelector(".app").classList.toggle("pvZoom", on);
         $("pvZoom").textContent = on ? "戻す（Esc）" : "拡大";
+        layoutColumns();
         scalePreview();
       }
       function applyInputOnly() {
@@ -3785,11 +3890,54 @@
           fitText(sec.querySelector(".htitle"), 40, 18);
         }
       }
+      // プレビューのカードに使える高さ（スクロールしていない状態の見た目で計算する）
+      function pvAvailH() {
+        const pv = document.querySelector(".preview"),
+          stage = document.querySelector(".stage");
+        const pr = pv.getBoundingClientRect(),
+          sr = stage.getBoundingClientRect();
+        const top = sr.top - pr.top + pv.scrollTop;
+        const viewH = Math.min(pv.clientHeight || innerHeight, innerHeight - Math.max(0, pr.top));
+        return viewH - top - 26 - 14;
+      }
+      // 列の幅（C: プレビュー欄はカードが収まる幅だけ取り、余りを入力欄へ。B: ドラッグした幅があればそれを使う）
+      const SIDE_MIN = 180,
+        SIDE_MAX = 420,
+        FORM_MIN = 380,
+        PV_MIN = 360;
+      function layoutColumns() {
+        const app = document.querySelector(".app");
+        const wide = innerWidth > 1180;
+        const sideW = Math.max(SIDE_MIN, Math.min(SIDE_MAX, prefs.sideW || 248));
+        app.style.setProperty("--sideW", sideW + "px");
+        if (!wide) {
+          app.style.removeProperty("--pvW");
+          return;
+        }
+        // 自動のときは入力欄に480pxを確保する。ドラッグしたときは380pxまで狭められる
+        const total = app.clientWidth,
+          maxPv = Math.max(PV_MIN, total - sideW - (prefs.pvW ? FORM_MIN : 480));
+        let pvW;
+        if (prefs.pvW) pvW = prefs.pvW;
+        else if (app.classList.contains("pvZoom") || app.classList.contains("inputOnly")) return;
+        else {
+          const pv = document.querySelector(".preview"),
+            stage = document.querySelector(".stage");
+          const extra =
+            pv.offsetWidth - pv.clientWidth + 32 + (stage.offsetWidth - stage.clientWidth) + 26;
+          pvW = Math.round(Math.min(1, Math.max(0.2, pvAvailH() / 874)) * 1240 + extra + 2);
+        }
+        pvW = Math.max(PV_MIN, Math.min(maxPv, pvW));
+        app.style.setProperty("--pvW", pvW + "px");
+      }
       function scalePreview() {
         let stage = document.querySelector(".stage");
         // 幅が取れないとき（非表示など）は倍率を変えない
         if (stage.clientWidth) {
+          const mode = prefs.pvFit || "fit";
           let scale = Math.min(1, (stage.clientWidth - 26) / 1240);
+          if (mode === "100") scale = 1;
+          else if (mode === "fit") scale = Math.min(scale, Math.max(0.2, pvAvailH() / 874));
           stage.querySelectorAll(".page").forEach((p) => {
             p.style.transform = `scale(${scale})`;
             p.style.marginBottom = 874 * (scale - 1) + "px";
@@ -5161,7 +5309,73 @@
           schedule();
         }
       };
-      addEventListener("resize", scalePreview);
+      addEventListener("resize", () => {
+        layoutColumns();
+        scalePreview();
+      });
+      function syncFitButtons() {
+        document
+          .querySelectorAll(".fitSeg [data-fit]")
+          .forEach((b) => b.classList.toggle("on", b.dataset.fit === (prefs.pvFit || "fit")));
+      }
+      document.querySelectorAll(".fitSeg [data-fit]").forEach(
+        (b) =>
+          (b.onclick = (e) => {
+            e.stopPropagation();
+            prefs.pvFit = b.dataset.fit;
+            syncFitButtons();
+            scalePreview();
+            schedule();
+          }),
+      );
+      syncFitButtons();
+      function dragSplitter(id, onMove) {
+        const h = $(id);
+        h.addEventListener("pointerdown", (e) => {
+          if (e.button !== 0) return;
+          e.preventDefault();
+          h.setPointerCapture(e.pointerId);
+          h.classList.add("dragging");
+          document.body.classList.add("resizing");
+          const move = (ev) => {
+            onMove(ev);
+            layoutColumns();
+          };
+          const up = () => {
+            h.removeEventListener("pointermove", move);
+            h.removeEventListener("pointerup", up);
+            h.removeEventListener("pointercancel", up);
+            h.classList.remove("dragging");
+            document.body.classList.remove("resizing");
+            scalePreview();
+            schedule();
+          };
+          h.addEventListener("pointermove", move);
+          h.addEventListener("pointerup", up);
+          h.addEventListener("pointercancel", up);
+        });
+      }
+      dragSplitter("splitL", (e) => {
+        const left = document.querySelector(".app").getBoundingClientRect().left;
+        prefs.sideW = Math.round(Math.max(SIDE_MIN, Math.min(SIDE_MAX, e.clientX - left)));
+      });
+      dragSplitter("splitR", (e) => {
+        const right = document.querySelector(".app").getBoundingClientRect().right;
+        prefs.pvW = Math.round(Math.max(PV_MIN, right - e.clientX));
+      });
+      $("splitL").ondblclick = () => {
+        delete prefs.sideW;
+        layoutColumns();
+        scalePreview();
+        schedule();
+      };
+      $("splitR").ondblclick = () => {
+        delete prefs.pvW;
+        layoutColumns();
+        scalePreview();
+        schedule();
+      };
+      layoutColumns();
       if (window.ResizeObserver) {
         let stageW = -1;
         new ResizeObserver((en) => {
@@ -5239,7 +5453,7 @@
         document.title = APP_NAME + " v" + APP_VERSION + " - リテイク指示カード";
         $("helpTitle").textContent = APP_NAME + " バージョン " + APP_VERSION;
         $("helpBody").textContent =
-          `【${APP_NAME}】 バージョン ${APP_VERSION}\n\n■ 用途\nアニメ制作のリテイク指示カードを作成し、印刷・共有用PNGとして書き出します。\n\n■ 免責事項\n・本ソフトウェアは現状のまま提供され、動作や結果について一切の保証をしません。\n・本ソフトウェアの使用、または使用できなかったことによって生じた損害\n　（データの消失・破損、業務上の損失などを含みます）について、開発者は責任を負いません。\n・重要なデータを編集する前に、必ずバックアップ（JSON保存）を取ってください。\n・予告なく機能や仕様の変更、開発の終了を行う場合があります。\n\n■ 使用しているソフトウェア\n・ブラウザ標準 Web API（Canvas / FileReader / localStorage など）\n・追加の外部ライブラリはありません\n・ライセンス：MIT License\n\n■ ショートカット\n${SHORTCUT_ACTIONS.map((a) => "・" + formatShortcut(prefs.shortcuts[a.id]) + " … " + a.label).join("\n")}\n\n■ 版（R回数）\nカットごとに過去の版を残せます。「新しい版を作る」で次のRが空で追加されます。Rの数字を直しても新しい版は増えません。\n全PNG・テキスト・TSVは各カットの最新版（Rが一番大きい版）を出します。画面のPNGは表示中の版です。\n\n■ 修正内容\nリテイク内容とは別の欄です。版ごとに保存し、文字色（黒・赤・青）も版ごとに選べます。空でもカードに欄を出します。\n参考画像は1枚目だけを修正内容の下に出し、2枚目以降は別ページ（1ページ4枚・左上から）です。\n優先度はカード見出しの左端に出します。\n各版に「作業済み」を付けられます。入力欄のチェックは今見ている版、一覧のチェックは最新の版です。印刷用のカードには出しません。\n「入力だけ見る」でプレビューを隠せます。\n\n■ 画面の配置\n上部バーに作品コード・話数・初期R、保存状態、PNG書き出し・全PNG・「出力・保存」メニュー（テキスト・TSV・JSON・状況をコピー・全リセット）、環境設定、ヘルプがあります。\n左はカット一覧、中央は入力欄、右はプレビューです。画面が狭いとき（約1180px以下）は、カット名の横の「入力」「プレビュー」で表示を切り替えます。\nプレビューをクリックするか「拡大」で画面いっぱいに表示します（もう一度クリックかEscで戻る）。拡大中も前／次のカットのショートカットが使えます。\n\n■ カット一覧のキー操作\n一覧をクリックしたあと、↑↓で選択、Home／Endで先頭／末尾、Enterでリテイク内容の入力欄へ、Spaceで最新の版の済／未を切り替えます。入力欄でEscを押すと一覧へ戻ります（日本語の変換中は除く）。\n一覧の上の「すべて／未了／済」の札で、最新の版の状態で絞り込めます（「未了」が以前の「作業済みを隠す」）。\n\n■ 撮入れ素材\n版ごとに、撮影に入れる素材（TP・BG・CG・2D・撮R）にチェックを付けられます。カードでは修正内容欄の右端に「撮入れ」の縦枠を出し、6枠すべてを□付きで並べます。チェックした素材だけ□に印が付きます。6枠目は初期では名前のない□だけの枠で、印刷後の手書きに使えます。右隣の「R」列は素材ごとのR回数の欄です。入力欄で素材名の横にR回数を入れるとカードに出ます。空欄なら手書き用に空けておきます。\n枠の名前は環境設定の「撮入れ素材の名前」で変えられます（2文字がおすすめ）。名前を変えても付けたチェックは残ります。テキスト出力にも出します（表用TSVには出しません）。\n入力欄を触っている間は、プレビューの対応する欄が青く光ります（画面表示だけで、書き出しには出ません）。\n\n■ 版の操作\n「新しい版を作る」は最大Rの次を空で追加します。Rの数字を直しても新しい版は増えません。同じカットに同じRは持てません。最後の1版は削除できません。カットの削除は全版を消します。\n\n■ 参考画像\n1枚目だけを修正内容の下に出します。2枚目以降は別ページ（1ページ最大4枚、左上から）です。追加はD&DまたはCtrl+V。サムネイルの→で他のカットへ移動・コピー、◀▶で順序変更、✕で外します（画像のクリックでは消えません）。\n「状況をコピー」は、版番号・カット数・画像の枚数・保存状態だけをコピーします。本文と画像そのものは含みません。\n\n■ アプリとしてインストール\nGitHub Pages 版を Chrome / Edge で開くと、上部に「⤓ インストール」が出ます（アドレスバー右のインストールのアイコンでも可）。押すと独立したウィンドウのアプリになり、スタートメニュー・Dock から起動でき、オフラインでも使えます。Mac の Safari は「ファイル」→「Dockに追加」です。\nインストールしたアプリのデータは、そのブラウザで開いた GitHub Pages 版と同じです。index.html をファイルとして開いた場合とは別のデータになります。\n\n■ データの保存場所\nテキスト・設定は localStorage キー：${KEY2}\n画像は IndexedDB（ブラウザ内・大容量）に1枚ずつ保存\n旧形式のデータ（${KEY}）は移行後もバックアップとして残しています\n（サイトごと。GitHub Pages とローカルファイルでは別データになります）\n\n■ サポート・公式情報\nFANBOX：https://akira0w0.fanbox.cc/\nX（旧Twitter）：https://x.com/Akira_0m0_\nGitHub：https://github.com/akira-t5/AniRetake\n変更履歴：https://github.com/akira-t5/AniRetake/blob/main/CHANGELOG.md\n\n(c) 2026 アキラ`;
+          `【${APP_NAME}】 バージョン ${APP_VERSION}\n\n■ 用途\nアニメ制作のリテイク指示カードを作成し、印刷・共有用PNGとして書き出します。\n\n■ 免責事項\n・本ソフトウェアは現状のまま提供され、動作や結果について一切の保証をしません。\n・本ソフトウェアの使用、または使用できなかったことによって生じた損害\n　（データの消失・破損、業務上の損失などを含みます）について、開発者は責任を負いません。\n・重要なデータを編集する前に、必ずバックアップ（JSON保存）を取ってください。\n・予告なく機能や仕様の変更、開発の終了を行う場合があります。\n\n■ 使用しているソフトウェア\n・ブラウザ標準 Web API（Canvas / FileReader / localStorage など）\n・追加の外部ライブラリはありません\n・ライセンス：MIT License\n\n■ ショートカット\n${SHORTCUT_ACTIONS.map((a) => "・" + formatShortcut(prefs.shortcuts[a.id]) + " … " + a.label).join("\n")}\n\n■ 版（R回数）\nカットごとに過去の版を残せます。「新しい版を作る」で次のRが空で追加されます。Rの数字を直しても新しい版は増えません。\n全PNG・テキスト・TSVは各カットの最新版（Rが一番大きい版）を出します。画面のPNGは表示中の版です。\n\n■ 修正内容\nリテイク内容とは別の欄です。版ごとに保存し、文字色（黒・赤・青）も版ごとに選べます。空でもカードに欄を出します。\n参考画像は1枚目だけを修正内容の下に出し、2枚目以降は別ページ（1ページ4枚・左上から）です。\n優先度はカード見出しの左端に出します。\n各版に「作業済み」を付けられます。入力欄のチェックは今見ている版、一覧のチェックは最新の版です。印刷用のカードには出しません。\n「入力だけ見る」でプレビューを隠せます。\n\n■ 画面の配置\n上部バーに作品コード・話数・初期R、保存状態、PNG書き出し・全PNG・「出力・保存」メニュー（テキスト・TSV・JSON・状況をコピー・全リセット）、環境設定、ヘルプがあります。\n左はカット一覧、中央は入力欄、右はプレビューです。画面が狭いとき（約1180px以下）は、カット名の横の「入力」「プレビュー」で表示を切り替えます。\nプレビューの大きさは「全体」（カード全体が画面に収まる。最大100%）／「幅」（欄の幅に合わせる）／「100%」で切り替えます。列の境目をドラッグすると一覧・プレビューの幅を変えられ、ダブルクリックで自動に戻ります。\nプレビューをクリックするか「拡大」で画面いっぱいに表示します（もう一度クリックかEscで戻る）。拡大中も前／次のカットのショートカットが使えます。\n\n■ カット一覧のキー操作\n一覧をクリックしたあと、↑↓で選択、Home／Endで先頭／末尾、Enterでリテイク内容の入力欄へ、Spaceで最新の版の済／未を切り替えます。入力欄でEscを押すと一覧へ戻ります（日本語の変換中は除く）。\n一覧の上の「すべて／未了／済」の札で、最新の版の状態で絞り込めます（「未了」が以前の「作業済みを隠す」）。\n\n■ 撮入れ素材\n版ごとに、撮影に入れる素材（TP・BG・CG・2D・撮R）にチェックを付けられます。カードでは修正内容欄の右端に「撮入れ」の縦枠を出し、6枠すべてを□付きで並べます。チェックした素材だけ□に印が付きます。6枠目は初期では名前のない□だけの枠で、印刷後の手書きに使えます。右隣の「R」列は素材ごとのR回数の欄です。入力欄で素材名の横にR回数を入れるとカードに出ます。空欄なら手書き用に空けておきます。\n枠の名前は環境設定の「撮入れ素材の名前」で変えられます（2文字がおすすめ）。名前を変えても付けたチェックは残ります。テキスト出力にも出します（表用TSVには出しません）。\n入力欄を触っている間は、プレビューの対応する欄が青く光ります（画面表示だけで、書き出しには出ません）。\n\n■ 版の操作\n「新しい版を作る」は最大Rの次を空で追加します。Rの数字を直しても新しい版は増えません。同じカットに同じRは持てません。最後の1版は削除できません。カットの削除は全版を消します。\n\n■ 参考画像\n1枚目だけを修正内容の下に出します。2枚目以降は別ページ（1ページ最大4枚、左上から）です。追加はD&DまたはCtrl+V。サムネイルの→で他のカットへ移動・コピー、◀▶で順序変更、✕で外します（画像のクリックでは消えません）。\n「状況をコピー」は、版番号・カット数・画像の枚数・保存状態だけをコピーします。本文と画像そのものは含みません。\n\n■ アプリとしてインストール\nGitHub Pages 版を Chrome / Edge で開くと、上部に「⤓ インストール」が出ます（アドレスバー右のインストールのアイコンでも可）。押すと独立したウィンドウのアプリになり、スタートメニュー・Dock から起動でき、オフラインでも使えます。Mac の Safari は「ファイル」→「Dockに追加」です。\nインストールしたアプリのデータは、そのブラウザで開いた GitHub Pages 版と同じです。index.html をファイルとして開いた場合とは別のデータになります。\n\n■ データの保存場所\nテキスト・設定は localStorage キー：${KEY2}\n画像は IndexedDB（ブラウザ内・大容量）に1枚ずつ保存\n旧形式のデータ（${KEY}）は移行後もバックアップとして残しています\n（サイトごと。GitHub Pages とローカルファイルでは別データになります）\n\n■ サポート・公式情報\nFANBOX：https://akira0w0.fanbox.cc/\nX（旧Twitter）：https://x.com/Akira_0m0_\nGitHub：https://github.com/akira-t5/AniRetake\n変更履歴：https://github.com/akira-t5/AniRetake/blob/main/CHANGELOG.md\n\n(c) 2026 アキラ`;
       }
       $("helpBtn").onclick = () => {
         fillHelp();
@@ -5306,6 +5520,7 @@
       $("togglePreview").onclick = () => {
         prefs.inputOnly = !prefs.inputOnly;
         applyInputOnly();
+        layoutColumns();
         scalePreview();
         schedule();
       };
