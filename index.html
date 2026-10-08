@@ -2441,9 +2441,16 @@
         <div class="btnrow">
           <button class="btn primary" id="addProcess">＋ 工程追加</button>
         </div>
+        <div class="settingsSection">
+          <h3>保存容量</h3>
+          <div class="hint" id="storeInfo"></div>
+        </div>
         <div class="settingsDanger">
           <h3>初期化</h3>
           <button class="btn dangerBtn" id="resetProcess">初期工程に戻す</button>
+          <button class="btn dangerBtn" id="clearBackups" style="margin-top: 8px">
+            古い形式の退避データを削除
+          </button>
         </div>
       </div>
     </div>
@@ -2481,7 +2488,7 @@
         KEY2 = "retake.v8",
         SCHEMA = 8,
         JSON_SCHEMA = 4;
-      const APP_VERSION = "1.21.2";
+      const APP_VERSION = "1.22.0";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -3284,20 +3291,27 @@
           dirty = true;
           return false;
         }
+        let quota = false;
         try {
-          localStorage.setItem(KEY2, JSON.stringify(doc));
+          const text = JSON.stringify(doc);
+          localStorage.setItem(KEY2, text);
           docRev = doc.rev;
+          mainStoreChars = KEY2.length + text.length;
         } catch (e) {
           textOk = false;
+          quota = !!(e && (e.name === "QuotaExceededError" || e.code === 22));
         }
         saving = false;
         lastOk = imgOk && textOk;
+        if (textOk) checkStoreCapacity();
         if (!lastOk) {
           dirty = true;
           setSaveState(
             "error",
             !textOk
-              ? "保存失敗：ブラウザに保存できません。JSON保存でバックアップしてください"
+              ? quota
+                ? "保存失敗：保存容量がいっぱいです。JSON保存してから、使い終わった話数か古い退避データを削除してください"
+                : "保存失敗：ブラウザに保存できません。JSON保存でバックアップしてください"
               : "保存失敗：画像を保存できません（空き容量を確認）。JSON保存でバックアップしてください",
           );
         } else if (dirty) {
@@ -3311,6 +3325,59 @@
               new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
           );
         return lastOk;
+      }
+      // ---------- 保存容量（localStorage の上限は約5MB。同じサイトの他のツールとも共有） ----------
+      const STORE_LIMIT = 5000000;
+      let otherStoreChars = -1,
+        mainStoreChars = 0,
+        capWarned = 0;
+      // 本体以外のキー（退避データ・他のツール）の大きさ。保存のたびに数えると重いので、起動時と削除時だけ数える
+      function countOtherStore() {
+        let n = 0;
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k === KEY2) continue;
+            n += k.length + (localStorage.getItem(k) || "").length;
+          }
+        } catch (e) {}
+        otherStoreChars = n;
+      }
+      function backupKeys() {
+        const keys = [];
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k === KEY || (k.startsWith(KEY2 + ".") && k !== KEY2)) keys.push(k);
+          }
+        } catch (e) {}
+        return keys.sort();
+      }
+      function backupChars() {
+        return backupKeys().reduce((a, k) => a + k.length + (localStorage.getItem(k) || "").length, 0);
+      }
+      function storeUsage() {
+        if (otherStoreChars < 0) countOtherStore();
+        if (!mainStoreChars)
+          try {
+            mainStoreChars = KEY2.length + (localStorage.getItem(KEY2) || "").length;
+          } catch (e) {}
+        return { used: mainStoreChars + otherStoreChars, ratio: (mainStoreChars + otherStoreChars) / STORE_LIMIT };
+      }
+      const fmtMB = (n) => (n / 1000000).toFixed(1) + "MB";
+      // 80% / 95% を超えたら1回ずつ知らせる
+      function checkStoreCapacity() {
+        const u = storeUsage();
+        const level = u.ratio >= 0.95 ? 2 : u.ratio >= 0.8 ? 1 : 0;
+        if (level > capWarned) {
+          capWarned = level;
+          showBanner(
+            `保存容量が${Math.round(u.ratio * 100)}％になりました（約${fmtMB(u.used)} / 約5MB）。いっぱいになると保存できなくなります。<br>使い終わった話数を「JSON保存」してから「この話数を削除」するか、環境設定の「保存容量」で古い形式の退避データを削除してください。`,
+            [],
+            "capacity",
+          );
+        }
+        if (level < capWarned) capWarned = level;
       }
       function showBanner(html, buttons, tag) {
         const b = $("storeBanner");
@@ -5825,7 +5892,35 @@
         renderPreview();
         schedule();
       };
+      function renderStoreInfo() {
+        countOtherStore();
+        const u = storeUsage(),
+          b = backupChars(),
+          keys = backupKeys();
+        $("storeInfo").textContent =
+          `使用中 約${fmtMB(u.used)} / 約5MB（${Math.round(u.ratio * 100)}％）。うち古い形式の退避データ ${keys.length}件 約${fmtMB(b)}。` +
+          `画像は別の場所（IndexedDB）に保存するので、ここには数えません。話数が増えたら、使い終わった話数を「JSON保存」してから削除すると空きます。`;
+        $("clearBackups").disabled = !keys.length;
+      }
+      $("clearBackups").onclick = () => {
+        const keys = backupKeys();
+        if (!keys.length) return;
+        if (
+          !confirm(
+            `保存形式を更新したときに残しておいた、古い形式の退避データ ${keys.length}件（約${fmtMB(backupChars())}）を削除しますか？\n${keys.join("\n")}\n\n今のデータは消えません。削除すると、古いバージョンのAniRetakeに戻してデータを開くことはできなくなります。必要なら先に「JSON保存」してください。`,
+          )
+        )
+          return;
+        keys.forEach((k) => {
+          try {
+            localStorage.removeItem(k);
+          } catch (e) {}
+        });
+        capWarned = 0;
+        renderStoreInfo();
+      };
       $("settingsBtn").onclick = () => {
+        renderStoreInfo();
         fillMatLabelInputs();
         fillTakeCodeInputs();
         $("settingsModal").classList.add("show");
@@ -6278,6 +6373,7 @@
           "版: " + cuts.reduce((a, c) => a + vers(c).length, 0),
           "画像: " + allImgIds().length,
           "話数: " + episodes.length,
+          "保存容量: " + Math.round(storeUsage().ratio * 100) + "%",
           "保存形式: " + SCHEMA,
         ].join("\n");
         try {
