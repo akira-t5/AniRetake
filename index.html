@@ -267,7 +267,7 @@
       }
       .hrow {
         display: grid;
-        grid-template-columns: 728px 220px 1fr;
+        grid-template-columns: 728px 296px 1fr;
         border-bottom: 3px solid #222;
       }
       .hcell {
@@ -329,7 +329,7 @@
       }
       .hdateRow {
         display: grid;
-        grid-template-columns: 1fr 88px;
+        grid-template-columns: 1fr 70px;
         border-bottom: 2px solid #222;
         min-height: 0;
       }
@@ -337,7 +337,7 @@
         border-bottom: 0;
       }
       .hdateRow .hsub {
-        padding-left: 10px;
+        padding-left: 8px;
         display: grid;
         align-content: center;
         justify-items: start;
@@ -354,7 +354,7 @@
       }
       .hcell.hrCell {
         display: grid;
-        grid-template-columns: 1fr 114px;
+        grid-template-columns: 1fr 160px;
         padding: 0;
         place-items: stretch;
       }
@@ -373,8 +373,8 @@
         display: flex;
         align-items: center;
         border-bottom: 1px dashed #888;
-        padding-left: 7px;
-        font-size: 13px;
+        padding-left: 11px;
+        font-size: 15px;
         font-weight: 800;
         white-space: nowrap;
       }
@@ -382,7 +382,7 @@
         border-bottom: 0;
       }
       .takeLabel {
-        width: 57px;
+        width: 77px;
         flex: none;
       }
       .takeLabel.on {
@@ -391,10 +391,10 @@
         outline-offset: 2px;
         border-radius: 50%;
         width: auto;
-        margin-right: 14px;
+        margin-right: 23px;
       }
       .takeNo {
-        font-size: 14px;
+        font-size: 16px;
       }
       .hdate {
         font-size: 24px;
@@ -4655,11 +4655,11 @@
         }
         ctx.textAlign = "left";
       }
-      // 撮影テイク欄（リテイク欄の右 x=870〜984、3段）。選んだ種類を赤丸で囲み、横に v-01 などを出す。
+      // 撮影テイク欄（リテイク欄の右 x=900〜1060、3段）。選んだ種類を赤丸で囲み、横に v-01 などを出す。
       // 番号が空でもハイフンまで出して手書きできるようにする
       function drawTakeBox(ctx, v) {
-        const x0 = 870,
-          x1 = 984,
+        const x0 = 900,
+          x1 = 1060,
           top = 36,
           rowH = 30,
           sel = cleanTakeType(v && v.takeType),
@@ -4685,22 +4685,22 @@
         ctx.setLineDash([]);
         TAKE_TYPES.forEach((t, i) => {
           const mid = top + rowH * i + rowH / 2;
-          ctx.font = '800 13px "Noto Sans JP",sans-serif';
+          ctx.font = '800 15px "Noto Sans JP",sans-serif';
           ctx.textAlign = "left";
           ctx.fillStyle = ink;
-          const lx = x0 + 7,
+          const lx = x0 + 11,
             lw = ctx.measureText(t.label).width;
-          ctx.fillText(t.label, lx, mid + 4.5);
+          ctx.fillText(t.label, lx, mid + 5.5);
           if (sel === t.code) {
             ctx.strokeStyle = red;
-            ctx.lineWidth = 2.2;
+            ctx.lineWidth = 2.4;
             ctx.beginPath();
-            ctx.ellipse(lx + lw / 2, mid, lw / 2 + 6, 11, 0, 0, Math.PI * 2);
+            ctx.ellipse(lx + lw / 2, mid, lw / 2 + 7, 12, 0, 0, Math.PI * 2);
             ctx.stroke();
           }
-          ctx.font = '800 14px "Noto Sans JP",sans-serif';
+          ctx.font = '800 16px "Noto Sans JP",sans-serif';
           ctx.fillStyle = ink;
-          ctx.fillText(takeCodeText(t.code, nos[t.code]), x0 + 64, mid + 5);
+          ctx.fillText(takeCodeText(t.code, nos[t.code]), x0 + 88, mid + 6);
         });
         ctx.restore();
       }
@@ -4710,9 +4710,9 @@
         ctx.lineTo(1204, 126);
         ctx.moveTo(764, 36);
         ctx.lineTo(764, 126);
-        ctx.moveTo(984, 36);
-        ctx.lineTo(984, 126);
-        ctx.moveTo(984, 81);
+        ctx.moveTo(1060, 36);
+        ctx.lineTo(1060, 126);
+        ctx.moveTo(1060, 81);
         ctx.lineTo(1204, 81);
         ctx.stroke();
         const _pri = priLabel(c);
@@ -4724,21 +4724,21 @@
           _x1 = 52 + ctx.measureText(_pri).width + 16;
         }
         centerTitleMixed(ctx, mainTitle(c), kenTitle(c), _x1, 764, 81);
-        centerText(ctx, "リテイク", 764, 870, 56, 11, false);
-        centerText(ctx, cm.rr, 764, 870, 102, 28);
+        centerText(ctx, "リテイク", 764, 900, 56, 11, false);
+        centerText(ctx, cm.rr, 764, 900, 102, 28);
         drawTakeBox(ctx, cm.v);
         ctx.font = '700 12px "Noto Sans JP",sans-serif';
         ctx.textAlign = "left";
-        ctx.fillText("リテイク日", 994, 63);
-        ctx.fillText("撮入れ日", 994, 108);
+        ctx.fillText("リテイク日", 1068, 63);
+        ctx.fillText("撮入れ日", 1068, 108);
         ctx.setLineDash([3, 3]);
         ctx.beginPath();
-        ctx.moveTo(1116, 36);
-        ctx.lineTo(1116, 126);
+        ctx.moveTo(1134, 36);
+        ctx.lineTo(1134, 126);
         ctx.stroke();
         ctx.setLineDash([]);
-        centerText(ctx, cm.retakeDate ? fmtShort(cm.retakeDate) : "/", 1116, 1204, 64, 14, false);
-        centerText(ctx, shootDate() ? fmtShort(shootDate()) : "/", 1116, 1204, 109, 14, false);
+        centerText(ctx, cm.retakeDate ? fmtShort(cm.retakeDate) : "/", 1134, 1204, 64, 14, false);
+        centerText(ctx, shootDate() ? fmtShort(shootDate()) : "/", 1134, 1204, 109, 14, false);
       }
       // 撮入れ素材の縦枠（修正内容欄の右端。素材 x=1084〜1160、R回数欄 x=1160〜1204。見出し＋6行）
       function drawMatBox(ctx, v) {
@@ -4954,7 +4954,8 @@
       // ================================================================
       // 書き出しカードのデザインは v1.14.0 で確定（2026-10-08、作者の決定）。
       // v1.18.0: 作者の指示で、撮入れ枠のチェックマークだけ赤（#c0392b）に変更。
-      // v1.21.0: 作者の指示で、リテイク欄の右（x=870〜984）に撮影テイク欄（本撮 v／タイ撮 t／線撮 s）を追加。
+      // v1.21.0: 作者の指示で、リテイク欄の右に撮影テイク欄（本撮 v／タイ撮 t／線撮 s）を追加。
+      //   日付欄を x=1060〜1204 に詰め、リテイク欄を x=764〜1060（R: 764〜900、撮影テイク: 900〜1060）に広げた。
       // 作者から変更の指示がない限り、座標・線・文字の大きさ・並びを変えないこと。
       // 対象: exportPng / drawHeader / drawRefCard / drawMatBox とプレビューのカード部分（.card 以下の CSS）。
       // 操作画面の改修では、同じデータの書き出しPNGが変更前と1ピクセルも違わないことを確かめる。
