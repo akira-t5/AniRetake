@@ -2481,7 +2481,7 @@
         KEY2 = "retake.v8",
         SCHEMA = 8,
         JSON_SCHEMA = 4;
-      const APP_VERSION = "1.21.1";
+      const APP_VERSION = "1.21.2";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -6105,9 +6105,18 @@
           schedule();
         }
       }
+      // 開いていない話数の画像をメモリから外す（話数を見て回るほどメモリが増え続けないように）。
+      // まだ IndexedDB に保存していない画像は外さない（保存前に切り替えても失わないように）
+      function releaseInactiveImages() {
+        const keep = new Set(allImgIds());
+        [...IMG.keys()].forEach((id) => {
+          if (!keep.has(id) && persistedImgs.has(id)) IMG.delete(id);
+        });
+      }
       async function openEpisode(ep) {
         applyDoc(Object.assign({}, ep, { isEpisode: true }), "v2");
         activeEp = ep.id;
+        releaseInactiveImages();
         await loadEpisodeImages();
         resetImgSigs();
         $("q").value = "";
