@@ -2343,7 +2343,7 @@
         KEY2 = "retake.v8",
         SCHEMA = 7,
         JSON_SCHEMA = 4;
-      const APP_VERSION = "1.20.0";
+      const APP_VERSION = "1.20.1";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -5095,6 +5095,10 @@
             String(d.getMonth() + 1).padStart(2, "0") +
             String(d.getDate()).padStart(2, "0");
         const seqs = prefs.jsonSeq && typeof prefs.jsonSeq === "object" ? prefs.jsonSeq : {};
+        // 今日以外の記録は消す（翌日は 01 から始まるので不要。記録が増え続けないように）
+        Object.keys(seqs).forEach((k) => {
+          if (!seqs[k] || seqs[k].date !== ymd) delete seqs[k];
+        });
         const last = seqs[base];
         const n = last && last.date === ymd ? (last.n | 0) + 1 : 1;
         seqs[base] = { date: ymd, n };
