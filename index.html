@@ -1149,6 +1149,31 @@
       .menuItem:hover {
         background: var(--soft2);
       }
+      .epPanel {
+        left: 0;
+        right: auto;
+        width: 290px;
+        max-height: 70vh;
+        overflow: auto;
+      }
+      .epItem {
+        width: 100%;
+      }
+      .menuItem:disabled {
+        opacity: 0.4;
+        cursor: default;
+        background: none;
+      }
+      .epItem b {
+        font-size: 14px;
+      }
+      .epItem.cur {
+        background: var(--blueSoft);
+        color: var(--blue);
+      }
+      .epItem.cur b::before {
+        content: "✓ ";
+      }
       .menuItem.danger {
         color: var(--red);
       }
@@ -1944,6 +1969,18 @@
           <h1><span class="tbName">AniRetake </span><span class="ver" id="appVer"></span></h1>
         </div>
         <div class="tbCommon" aria-label="共通情報">
+          <details class="menu epMenu" id="epMenu">
+            <summary class="btn secondary" title="作品・話数を切り替える／新しい話数を作る">話数</summary>
+            <div class="menuPanel epPanel">
+              <div class="menuGroup">作品・話数を切り替え</div>
+              <div id="epList"></div>
+              <div class="menuSep"></div>
+              <button class="menuItem" id="epNew">
+                ＋ 新しい話数を作る<small>同じ作品コードで次の話数。工程名は引き継ぎ、日付は空</small>
+              </button>
+              <button class="menuItem danger" id="epDel">この話数を削除</button>
+            </div>
+          </details>
           <label class="tbField"
             ><span>作品コード<b class="req" title="必須">*</b></span><input id="code" value="AAA"
           /></label>
@@ -2304,9 +2341,9 @@
     <script>
       const KEY = "retake.v7",
         KEY2 = "retake.v8",
-        SCHEMA = 6,
+        SCHEMA = 7,
         JSON_SCHEMA = 4;
-      const APP_VERSION = "1.18.0";
+      const APP_VERSION = "1.19.0";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -2361,6 +2398,10 @@
         },
       ];
       let selected = 0;
+      // 作品・話数ごとのデータ。開いている話数は cuts / processes / 上部の入力欄が本体で、
+      // episodes の同じ id の項目は保存のたびに写しを作る（captureActive）
+      let episodes = [{ id: "e" + Date.now().toString(36) }],
+        activeEp = episodes[0].id;
       let listOrder = [];
       let doneFilter = "all"; // 一覧の絞り込み: all / open（未了） / done（済）。最新の版で判定
       const $ = (id) => document.getElementById(id);
@@ -2510,6 +2551,19 @@
       }
       function allImgIds() {
         return [...new Set(cuts.flatMap((c) => vers(c).flatMap((v) => v.images || [])))];
+      }
+      // 開いていない話数も含めた、参照されている全画像（掃除で他の話数の画像を消さないため）
+      function allRefImgIds() {
+        const ids = new Set(allImgIds());
+        episodes.forEach((e) => {
+          if (e.id === activeEp || !Array.isArray(e.cuts)) return;
+          e.cuts.forEach((c) =>
+            (c.versions || []).forEach((v) =>
+              (v.images || []).forEach((id) => typeof id === "string" && ids.add(id)),
+            ),
+          );
+        });
+        return [...ids];
       }
       function nextFreeR(vs, r) {
         r = parseR(r);
@@ -2919,7 +2973,7 @@
         el.title = msg;
       }
       function snapshotDoc() {
-        return {
+        const doc = {
           schemaVersion: SCHEMA,
           rev: docRev + 1,
           tab: tabId,
@@ -2950,6 +3004,25 @@
           selected,
           prefs,
         };
+        const cur = captureActive(doc);
+        doc.activeEp = activeEp;
+        doc.episodes = episodes.map((e) => (e.id === activeEp ? cur : e));
+        return doc;
+      }
+      // 開いている話数の写し（snapshotDoc で作った doc から取る）
+      function captureActive(doc) {
+        doc = doc || snapshotDoc();
+        return {
+          id: activeEp,
+          common: doc.common,
+          processes: JSON.parse(JSON.stringify(doc.processes)),
+          cuts: doc.cuts,
+          selected: doc.selected,
+        };
+      }
+      function epLabel(e) {
+        const c = (e && e.common) || {};
+        return `${c.code || "作品"} / ${c.ep || "--"}`;
       }
       function storedMeta() {
         try {
@@ -3253,6 +3326,18 @@
           });
           selected = Math.max(0, Math.min(d.selected | 0, cuts.length - 1));
         }
+        if (mode !== "json" && !d.isEpisode) {
+          const list = Array.isArray(d.episodes)
+            ? d.episodes.filter((e) => e && typeof e.id === "string" && Array.isArray(e.cuts))
+            : [];
+          if (list.length) {
+            episodes = list;
+            activeEp = list.some((e) => e.id === d.activeEp) ? d.activeEp : list[0].id;
+          } else {
+            episodes = [{ id: newId("e") }];
+            activeEp = episodes[0].id;
+          }
+        }
       }
       async function verifyStored() {
         try {
@@ -3277,7 +3362,7 @@
       async function sweepImgs() {
         const keys = await idb.allKeys("imgs");
         if (!keys || !keys.length) return;
-        const ref = new Set(allImgIds()),
+        const ref = new Set(allRefImgIds()),
           old = Date.now() - 600000,
           del = keys.filter((k) => !ref.has(k) && idTime(k) < old);
         if (del.length) idb.delMany("imgs", del);
@@ -3305,7 +3390,9 @@
           } else if ((d.schemaVersion | 0) > SCHEMA) block = "newer";
           else {
             mode =
-              (d.schemaVersion | 0) >= 6
+              (d.schemaVersion | 0) >= 7
+                ? "v7"
+                : (d.schemaVersion | 0) >= 6
                 ? "v6"
                 : (d.schemaVersion | 0) >= 5
                   ? "v5"
@@ -3339,7 +3426,14 @@
           blockSave(block);
           return;
         }
-        if (mode === "v2" || mode === "v3" || mode === "v4" || mode === "v5" || mode === "v6") {
+        if (
+          mode === "v2" ||
+          mode === "v3" ||
+          mode === "v4" ||
+          mode === "v5" ||
+          mode === "v6" ||
+          mode === "v7"
+        ) {
           const ids = allImgIds();
           let missing = [];
           if (ids.length) {
@@ -3377,9 +3471,24 @@
         resetImgSigs();
         loadToForm();
         renderAll();
-        if (mode === "legacy" || mode === "v2" || mode === "v3" || mode === "v4" || mode === "v5") {
+        if (
+          mode === "legacy" ||
+          mode === "v2" ||
+          mode === "v3" ||
+          mode === "v4" ||
+          mode === "v5" ||
+          mode === "v6"
+        ) {
           const bak =
-            mode === "v5" ? ".s5" : mode === "v4" ? ".s4" : mode === "v3" ? ".s3" : ".s2";
+            mode === "v6"
+              ? ".s6"
+              : mode === "v5"
+                ? ".s5"
+                : mode === "v4"
+                  ? ".s4"
+                  : mode === "v3"
+                    ? ".s3"
+                    : ".s2";
           if (mode !== "legacy") {
             try {
               if (raw != null && !localStorage.getItem(KEY2 + bak))
@@ -3393,6 +3502,8 @@
           const msg =
             mode === "legacy"
               ? `旧形式のデータを新しい保存形式へ移行しました（${cuts.length}カット・画像${n}枚）。旧データ（${KEY}）はバックアップとして残しています。`
+              : mode === "v6"
+                ? `作品・話数の切り替えに対応する形式へ更新しました（${cuts.length}カット）。今のデータは「${epLabel(captureActive())}」として残っています。更新前のデータは ${KEY2}.s6 に残しています。`
               : mode === "v5"
                 ? `撮入れ素材のチェックに対応する形式へ更新しました（${cuts.length}カット）。これまでの版はチェックなしのままです。更新前のデータは ${KEY2}.s5 に残しています。`
               : mode === "v4"
@@ -5045,18 +5156,40 @@
             e.target.value = "";
             return;
           }
+          // 読み込み先: 同じ作品・話数が保存済みならそこを置き換え、無ければ新しい話数として追加する
           const cc = common(),
             nc = String(d.common?.code || "").toUpperCase(),
             ne = String(d.common?.ep || "");
-          if (
-            cuts.some((c) => c.cut || vers(c).some((v) => v.body || (v.images || []).length)) &&
-            ((cc.code && nc && cc.code !== nc) || (cc.ep && ne && cc.ep !== ne)) &&
-            !confirm(
-              `作品コード・話数が現在の内容と異なります。\n現在：${cc.code} / ${cc.ep}（${cuts.length}カット）\n読込：${nc} / ${ne}（${d.cuts.length}カット）\n\n現在の内容を、読み込んだ内容で置き換えますか？`,
-            )
-          ) {
-            e.target.value = "";
-            return;
+          const hasContent = cuts.some(
+            (c) => c.cut || vers(c).some((v) => v.body || (v.images || []).length),
+          );
+          const sameAsCur = cc.code === nc && cc.ep === ne;
+          const other = episodes.find((x) => {
+            if (x.id === activeEp) return false;
+            const xc = x.common || {};
+            return String(xc.code || "").toUpperCase() === nc && String(xc.ep || "") === ne;
+          });
+          if (other && !sameAsCur) {
+            if (
+              !confirm(
+                `「${nc} / ${ne}」は保存済みです（${epStats(other).n}カット）。\n読み込んだ内容（${d.cuts.length}カット）で置き換えますか？`,
+              )
+            ) {
+              e.target.value = "";
+              return;
+            }
+            await switchEpisode(other.id);
+          } else if (sameAsCur && hasContent) {
+            if (
+              !confirm(
+                `今開いている「${nc} / ${ne}」（${cuts.length}カット）を、読み込んだ内容（${d.cuts.length}カット）で置き換えますか？`,
+              )
+            ) {
+              e.target.value = "";
+              return;
+            }
+          } else if (!sameAsCur && hasContent) {
+            await addEpisode(nc, ne);
           }
           applyDoc(d, "json");
           if (saveBlocked === "broken" || saveBlocked === "brokenOld") {
@@ -5108,7 +5241,16 @@
           );
           return;
         }
-        if (!confirm("全入力をリセットしますか？")) return;
+        if (
+          !confirm(
+            episodes.length > 1
+              ? `保存されている全ての作品・話数（${episodes.length}件）を消去しますか？\n必要なら先に各話数を「JSON保存」でバックアップしてください。`
+              : "全入力をリセットしますか？",
+          )
+        )
+          return;
+        episodes = [{ id: newId("e") }];
+        activeEp = episodes[0].id;
         clearTimeout(saveTimer);
         try {
           localStorage.removeItem(KEY2);
@@ -5409,6 +5551,10 @@
           $("outputBox").removeAttribute("open");
           return;
         }
+        if (e.key === "Escape" && $("epMenu").open) {
+          $("epMenu").removeAttribute("open");
+          return;
+        }
         if (e.key === "Escape" && pvZoomed()) {
           e.preventDefault();
           setPvZoom(false);
@@ -5464,7 +5610,7 @@
         document.title = APP_NAME + " v" + APP_VERSION + " - リテイク指示カード";
         $("helpTitle").textContent = APP_NAME + " バージョン " + APP_VERSION;
         $("helpBody").textContent =
-          `【${APP_NAME}】 バージョン ${APP_VERSION}\n\n■ 用途\nアニメ制作のリテイク指示カードを作成し、印刷・共有用PNGとして書き出します。\n\n■ 免責事項\n・本ソフトウェアは現状のまま提供され、動作や結果について一切の保証をしません。\n・本ソフトウェアの使用、または使用できなかったことによって生じた損害\n　（データの消失・破損、業務上の損失などを含みます）について、開発者は責任を負いません。\n・重要なデータを編集する前に、必ずバックアップ（JSON保存）を取ってください。\n・予告なく機能や仕様の変更、開発の終了を行う場合があります。\n\n■ 使用しているソフトウェア\n・ブラウザ標準 Web API（Canvas / FileReader / localStorage など）\n・追加の外部ライブラリはありません\n・ライセンス：MIT License\n\n■ ショートカット\n${SHORTCUT_ACTIONS.map((a) => "・" + formatShortcut(prefs.shortcuts[a.id]) + " … " + a.label).join("\n")}\n\n■ 版（R回数）\nカットごとに過去の版を残せます。「新しい版を作る」で次のRが空で追加されます。Rの数字を直しても新しい版は増えません。\n全PNG・テキスト・TSVは各カットの最新版（Rが一番大きい版）を出します。画面のPNGは表示中の版です。\n\n■ 修正内容\nリテイク内容とは別の欄です。版ごとに保存し、文字色（黒・赤・青）も版ごとに選べます。空でもカードに欄を出します。\n参考画像は1枚目だけを修正内容の下に出し、2枚目以降は別ページ（1ページ4枚・左上から）です。\n優先度はカード見出しの左端に出します。\n各版に「作業済み」を付けられます。入力欄のチェックは今見ている版、一覧のチェックは最新の版です。印刷用のカードには出しません。\n「入力だけ見る」でプレビューを隠せます。\n\n■ 画面の配置\n上部バーに作品コード・話数・初期R、保存状態、PNG書き出し・全PNG・「出力・保存」メニュー（テキスト・TSV・JSON・状況をコピー・全リセット）、環境設定、ヘルプがあります。\n左はカット一覧、中央は入力欄、右はプレビューです。画面が狭いとき（約1180px以下）は、カット名の横の「入力」「プレビュー」で表示を切り替えます。\nプレビューの大きさは「全体」（カード全体が画面に収まる。最大100%）／「幅」（欄の幅に合わせる）／「100%」で切り替えます。列の境目をドラッグすると一覧・プレビューの幅を変えられ、ダブルクリックで自動に戻ります。\nプレビューをクリックするか「拡大」で画面いっぱいに表示します（もう一度クリックかEscで戻る）。拡大中も前／次のカットのショートカットが使えます。\n\n■ カット一覧のキー操作\n一覧をクリックしたあと、↑↓で選択、Home／Endで先頭／末尾、Enterでリテイク内容の入力欄へ、Spaceで最新の版の済／未を切り替えます。入力欄でEscを押すと一覧へ戻ります（日本語の変換中は除く）。\n一覧の上の「すべて／未了／済」の札で、最新の版の状態で絞り込めます（「未了」が以前の「作業済みを隠す」）。\n\n■ 撮入れ素材\n版ごとに、撮影に入れる素材（TP・BG・CG・2D・撮R）にチェックを付けられます。カードでは修正内容欄の右端に「撮入れ」の縦枠を出し、6枠すべてを□付きで並べます。チェックした素材だけ□に赤い印が付きます。6枠目は初期では名前のない□だけの枠で、印刷後の手書きに使えます。右隣の「R」列は素材ごとのR回数の欄です。入力欄で素材名の横にR回数を入れるとカードに出ます。空欄なら手書き用に空けておきます。\n枠の名前は環境設定の「撮入れ素材の名前」で変えられます（2文字がおすすめ）。名前を変えても付けたチェックは残ります。テキスト出力にも出します（表用TSVには出しません）。\n入力欄を触っている間は、プレビューの対応する欄が青く光ります（画面表示だけで、書き出しには出ません）。\n\n■ 版の操作\n「新しい版を作る」は最大Rの次を空で追加します。Rの数字を直しても新しい版は増えません。同じカットに同じRは持てません。最後の1版は削除できません。カットの削除は全版を消します。\n\n■ 参考画像\n1枚目だけを修正内容の下に出します。2枚目以降は別ページ（1ページ最大4枚、左上から）です。追加はD&DまたはCtrl+V。サムネイルの→で他のカットへ移動・コピー、◀▶で順序変更、✕で外します（画像のクリックでは消えません）。\n「状況をコピー」は、版番号・カット数・画像の枚数・保存状態だけをコピーします。本文と画像そのものは含みません。\n\n■ アプリとしてインストール\nGitHub Pages 版を Chrome / Edge で開くと、上部に「⤓ インストール」が出ます（アドレスバー右のインストールのアイコンでも可）。押すと独立したウィンドウのアプリになり、スタートメニュー・Dock から起動でき、オフラインでも使えます。Mac の Safari は「ファイル」→「Dockに追加」です。\nインストールしたアプリのデータは、そのブラウザで開いた GitHub Pages 版と同じです。index.html をファイルとして開いた場合とは別のデータになります。\n\n■ データの保存場所\nテキスト・設定は localStorage キー：${KEY2}\n画像は IndexedDB（ブラウザ内・大容量）に1枚ずつ保存\n旧形式のデータ（${KEY}）は移行後もバックアップとして残しています\n（サイトごと。GitHub Pages とローカルファイルでは別データになります）\n\n■ サポート・公式情報\nFANBOX：https://akira0w0.fanbox.cc/\nX（旧Twitter）：https://x.com/Akira_0m0_\nGitHub：https://github.com/akira-t5/AniRetake\n変更履歴：https://github.com/akira-t5/AniRetake/blob/main/CHANGELOG.md\n\n(c) 2026 アキラ`;
+          `【${APP_NAME}】 バージョン ${APP_VERSION}\n\n■ 用途\nアニメ制作のリテイク指示カードを作成し、印刷・共有用PNGとして書き出します。\n\n■ 免責事項\n・本ソフトウェアは現状のまま提供され、動作や結果について一切の保証をしません。\n・本ソフトウェアの使用、または使用できなかったことによって生じた損害\n　（データの消失・破損、業務上の損失などを含みます）について、開発者は責任を負いません。\n・重要なデータを編集する前に、必ずバックアップ（JSON保存）を取ってください。\n・予告なく機能や仕様の変更、開発の終了を行う場合があります。\n\n■ 使用しているソフトウェア\n・ブラウザ標準 Web API（Canvas / FileReader / localStorage など）\n・追加の外部ライブラリはありません\n・ライセンス：MIT License\n\n■ ショートカット\n${SHORTCUT_ACTIONS.map((a) => "・" + formatShortcut(prefs.shortcuts[a.id]) + " … " + a.label).join("\n")}\n\n■ 版（R回数）\nカットごとに過去の版を残せます。「新しい版を作る」で次のRが空で追加されます。Rの数字を直しても新しい版は増えません。\n全PNG・テキスト・TSVは各カットの最新版（Rが一番大きい版）を出します。画面のPNGは表示中の版です。\n\n■ 修正内容\nリテイク内容とは別の欄です。版ごとに保存し、文字色（黒・赤・青）も版ごとに選べます。空でもカードに欄を出します。\n参考画像は1枚目だけを修正内容の下に出し、2枚目以降は別ページ（1ページ4枚・左上から）です。\n優先度はカード見出しの左端に出します。\n各版に「作業済み」を付けられます。入力欄のチェックは今見ている版、一覧のチェックは最新の版です。印刷用のカードには出しません。\n「入力だけ見る」でプレビューを隠せます。\n\n■ 画面の配置\n上部バーに作品コード・話数・初期R、保存状態、PNG書き出し・全PNG・「出力・保存」メニュー（テキスト・TSV・JSON・状況をコピー・全リセット）、環境設定、ヘルプがあります。\n左はカット一覧、中央は入力欄、右はプレビューです。画面が狭いとき（約1180px以下）は、カット名の横の「入力」「プレビュー」で表示を切り替えます。\nプレビューの大きさは「全体」（カード全体が画面に収まる。最大100%）／「幅」（欄の幅に合わせる）／「100%」で切り替えます。列の境目をドラッグすると一覧・プレビューの幅を変えられ、ダブルクリックで自動に戻ります。\nプレビューをクリックするか「拡大」で画面いっぱいに表示します（もう一度クリックかEscで戻る）。拡大中も前／次のカットのショートカットが使えます。\n\n■ カット一覧のキー操作\n一覧をクリックしたあと、↑↓で選択、Home／Endで先頭／末尾、Enterでリテイク内容の入力欄へ、Spaceで最新の版の済／未を切り替えます。入力欄でEscを押すと一覧へ戻ります（日本語の変換中は除く）。\n一覧の上の「すべて／未了／済」の札で、最新の版の状態で絞り込めます（「未了」が以前の「作業済みを隠す」）。\n\n■ 撮入れ素材\n版ごとに、撮影に入れる素材（TP・BG・CG・2D・撮R）にチェックを付けられます。カードでは修正内容欄の右端に「撮入れ」の縦枠を出し、6枠すべてを□付きで並べます。チェックした素材だけ□に赤い印が付きます。6枠目は初期では名前のない□だけの枠で、印刷後の手書きに使えます。右隣の「R」列は素材ごとのR回数の欄です。入力欄で素材名の横にR回数を入れるとカードに出ます。空欄なら手書き用に空けておきます。\n枠の名前は環境設定の「撮入れ素材の名前」で変えられます（2文字がおすすめ）。名前を変えても付けたチェックは残ります。テキスト出力にも出します（表用TSVには出しません）。\n入力欄を触っている間は、プレビューの対応する欄が青く光ります（画面表示だけで、書き出しには出ません）。\n\n■ 作品・話数の切り替え\n上部の「話数 ▾」から、保存済みの作品・話数を切り替えます。「＋ 新しい話数を作る」は同じ作品コードで次の話数を作ります（工程名は引き継ぎ、日付は空）。カット・工程の日付・選択位置は話数ごと、用紙・ショートカット・撮入れ素材名・列幅は全話数で共通です。\n全PNG・テキスト・TSV・JSON保存は、開いている話数だけを出します。JSON読込は、同じ作品・話数が保存済みならそこを置き換え（確認あり）、無ければ新しい話数として追加します。\n\n■ 版の操作\n「新しい版を作る」は最大Rの次を空で追加します。Rの数字を直しても新しい版は増えません。同じカットに同じRは持てません。最後の1版は削除できません。カットの削除は全版を消します。\n\n■ 参考画像\n1枚目だけを修正内容の下に出します。2枚目以降は別ページ（1ページ最大4枚、左上から）です。追加はD&DまたはCtrl+V。サムネイルの→で他のカットへ移動・コピー、◀▶で順序変更、✕で外します（画像のクリックでは消えません）。\n「状況をコピー」は、版番号・カット数・画像の枚数・保存状態だけをコピーします。本文と画像そのものは含みません。\n\n■ アプリとしてインストール\nGitHub Pages 版を Chrome / Edge で開くと、上部に「⤓ インストール」が出ます（アドレスバー右のインストールのアイコンでも可）。押すと独立したウィンドウのアプリになり、スタートメニュー・Dock から起動でき、オフラインでも使えます。Mac の Safari は「ファイル」→「Dockに追加」です。\nインストールしたアプリのデータは、そのブラウザで開いた GitHub Pages 版と同じです。index.html をファイルとして開いた場合とは別のデータになります。\n\n■ データの保存場所\nテキスト・設定は localStorage キー：${KEY2}\n画像は IndexedDB（ブラウザ内・大容量）に1枚ずつ保存\n旧形式のデータ（${KEY}）は移行後もバックアップとして残しています\n（サイトごと。GitHub Pages とローカルファイルでは別データになります）\n\n■ サポート・公式情報\nFANBOX：https://akira0w0.fanbox.cc/\nX（旧Twitter）：https://x.com/Akira_0m0_\nGitHub：https://github.com/akira-t5/AniRetake\n変更履歴：https://github.com/akira-t5/AniRetake/blob/main/CHANGELOG.md\n\n(c) 2026 アキラ`;
       }
       $("helpBtn").onclick = () => {
         fillHelp();
@@ -5481,6 +5627,151 @@
         if (e.target.id === "imgMoveModal") closeImgMove();
       };
       $("groupDup").onchange = () => renderList();
+      // ---------- 作品・話数の切り替え ----------
+      function epStats(e) {
+        const list = e.id === activeEp ? cuts : e.cuts || [];
+        const latest = (c) => {
+          const vs = c.versions || [];
+          return vs.reduce((a, v) => ((v.r | 0) > (a.r | 0) ? v : a), vs[0] || {});
+        };
+        return { n: list.length, open: list.filter((c) => !latest(c).done).length };
+      }
+      function renderEpList() {
+        const box = $("epList");
+        box.innerHTML = "";
+        const cur = captureActive();
+        const list = episodes
+          .map((e) => (e.id === activeEp ? cur : e))
+          .slice()
+          .sort((a, b) =>
+            epLabel(a).localeCompare(epLabel(b), "ja", { numeric: true }),
+          );
+        list.forEach((e) => {
+          const st = epStats(e);
+          const b = document.createElement("button");
+          b.className = "menuItem epItem" + (e.id === activeEp ? " cur" : "");
+          const t = document.createElement("b");
+          t.textContent = epLabel(e);
+          const sm = document.createElement("small");
+          sm.textContent = `${st.n}カット・未了 ${st.open}件`;
+          b.appendChild(t);
+          b.appendChild(sm);
+          b.onclick = () => {
+            $("epMenu").removeAttribute("open");
+            if (e.id !== activeEp) switchEpisode(e.id);
+          };
+          box.appendChild(b);
+        });
+        $("epDel").disabled = episodes.length <= 1;
+      }
+      // 開くクリックの時点で一覧を作り直す（toggle は遅れて届くため、古い一覧が一瞬見えないように）
+      $("epMenu").querySelector("summary").addEventListener("click", () => {
+        if (!$("epMenu").open) renderEpList();
+      });
+      document.addEventListener("click", (e) => {
+        if ($("epMenu").open && !$("epMenu").contains(e.target)) $("epMenu").removeAttribute("open");
+      });
+      // 開いている話数の画像を IndexedDB から読み込む。無くなっていた画像は外して知らせる
+      async function loadEpisodeImages() {
+        const need = allImgIds().filter((id) => !IMG.has(id));
+        if (!need.length || !idb.db) return;
+        const m = await idb.getMany("imgs", need);
+        const missing = [];
+        need.forEach((id) => {
+          if (m && m.has(id)) {
+            IMG.set(id, m.get(id));
+            persistedImgs.add(id);
+          } else missing.push(id);
+        });
+        if (missing.length && m) {
+          const ms = new Set(missing);
+          cuts.forEach((c) =>
+            vers(c).forEach((v) => (v.images = (v.images || []).filter((id) => !ms.has(id)))),
+          );
+          showBanner(
+            `この話数の画像${missing.length}枚を復元できませんでした。お手元のJSON保存を読み込むと復元できます。`,
+            [],
+            "missing",
+          );
+          schedule();
+        }
+      }
+      async function openEpisode(ep) {
+        applyDoc(Object.assign({}, ep, { isEpisode: true }), "v2");
+        activeEp = ep.id;
+        await loadEpisodeImages();
+        resetImgSigs();
+        $("q").value = "";
+        loadToForm();
+        renderAll();
+      }
+      async function switchEpisode(id) {
+        if (saveBlocked === "newer") return;
+        await waitImgs();
+        const target = episodes.find((e) => e.id === id);
+        if (!target) return;
+        const cur = captureActive();
+        episodes = episodes.map((e) => (e.id === activeEp ? cur : e));
+        await openEpisode(target);
+        dirty = true;
+        flushSave();
+      }
+      function nextEpNo(ep) {
+        const m = /^(\d+)$/.exec(ep || "");
+        if (!m) return "";
+        return String(+m[1] + 1).padStart(m[1].length, "0");
+      }
+      function blankEpisode(code, ep) {
+        return {
+          id: newId("e"),
+          common: { code: code || "", ep: ep || "", r: "1" },
+          processes: processes.map((p) => ({ name: p.name, date: "" })),
+          cuts: [
+            {
+              id: newId("c"),
+              cut: "",
+              subcut: "",
+              priority: "",
+              selectedVer: 0,
+              versions: [Object.assign(emptyVer(1), { retakeDate: prefs.lastRetakeDate || "" })],
+            },
+          ],
+          selected: 0,
+        };
+      }
+      async function addEpisode(code, ep) {
+        await waitImgs();
+        const cur = captureActive();
+        episodes = episodes.map((e) => (e.id === activeEp ? cur : e));
+        const ne = blankEpisode(code, ep);
+        episodes.push(ne);
+        await openEpisode(ne);
+        dirty = true;
+        flushSave();
+        return ne;
+      }
+      $("epNew").onclick = async () => {
+        $("epMenu").removeAttribute("open");
+        const c = common();
+        await addEpisode(c.code, nextEpNo(c.ep));
+        $("ep").focus();
+        $("ep").select();
+      };
+      $("epDel").onclick = async () => {
+        $("epMenu").removeAttribute("open");
+        if (episodes.length <= 1) return;
+        const cur = captureActive();
+        if (
+          !confirm(
+            `「${epLabel(cur)}」（${cuts.length}カット）を削除しますか？\nこの話数のカット・版・画像の参照がすべて消えます。必要なら先に「JSON保存」でバックアップしてください。`,
+          )
+        )
+          return;
+        episodes = episodes.filter((e) => e.id !== activeEp);
+        await openEpisode(episodes[0]);
+        dirty = true;
+        flushSave();
+      };
       $("pvZoom").onclick = () => setPvZoom(!pvZoomed());
       // 入力欄を触っている間、プレビューの対応する欄を光らせる（画面表示だけ。書き出しには出ない）
       const PV_TARGET = {
@@ -5557,6 +5848,7 @@
           "カット: " + cuts.length,
           "版: " + cuts.reduce((a, c) => a + vers(c).length, 0),
           "画像: " + allImgIds().length,
+          "話数: " + episodes.length,
           "保存形式: " + SCHEMA,
         ].join("\n");
         try {
