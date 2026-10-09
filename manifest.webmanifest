@@ -3,6 +3,7 @@
   "short_name": "AniRetake",
   "description": "アニメ制作のカット別リテイク指示カードを作り、印刷・共有用PNGに書き出すツール",
   "lang": "ja",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

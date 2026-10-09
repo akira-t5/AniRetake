@@ -2080,6 +2080,10 @@
           padding-left: 0;
         }
       }
+      .processRow input.tooLong {
+        border-color: #c0392b;
+        background: #fdf0ee;
+      }
     </style>
   </head>
   <body>
@@ -2489,7 +2493,7 @@
         KEY2 = "retake.v8",
         SCHEMA = 9,
         JSON_SCHEMA = 4;
-      const APP_VERSION = "1.24.0";
+      const APP_VERSION = "1.24.2";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -2513,7 +2517,7 @@
       };
       // 撮入れ素材の6枠の名前（環境設定で変更可）。空欄の枠はカードに□だけ出す
       const MAT_SLOTS = 6;
-      const DEFAULT_MAT_LABELS = ["TP", "BG", "CG", "2D", "撮R", ""];
+      const DEFAULT_MAT_LABELS = ["セル", "BG", "CG", "2D", "撮R", ""];
       let prefs = {
         paper: "A5",
         inputOnly: false,
@@ -2554,14 +2558,18 @@
       let doneFilter = "all"; // 一覧の絞り込み: all / open（未了） / done（済）。最新の版で判定
       const $ = (id) => document.getElementById(id);
       const cleanCut = (v) =>
-        (v || "")
+        String(v == null ? "" : v)
           .replace(/[‐-―ー−〜]/g, "-")
           .replace(/＿/g, "_")
           .replace(/[０-９Ａ-Ｚａ-ｚ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
           .toUpperCase()
           .replace(/[^0-9A-Z\-_]/g, "")
           .replace(/--+/g, "-");
-      const cleanNum = (v) => (v || "").replace(/[^0-9]/g, "");
+      // 全角の数字も半角に直してから残す（IMEで「０５」と打っても消えないように）
+      const cleanNum = (v) => String(v == null ? "" : v).normalize("NFKC").replace(/[^0-9]/g, "");
+      // 読み込んだデータの値を文字列・日付にそろえる（数値などが混ざっても止まらないように）
+      const strOf = (v) => (typeof v === "string" ? v : v == null ? "" : String(v));
+      const dateOf = (v) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "");
       // 画面に文字列を組み込むときは必ず通す（読み込んだJSONの文字列がタグとして動かないように）
       const escHtml = (v) =>
         String(v == null ? "" : v).replace(
@@ -2572,7 +2580,7 @@
       // 画像として受け付ける形（data:種類;base64,…）。本体が base64 の文字だけでできていれば
       // 引用符やタグは入り得ない。これ以外の文字列は画像として扱わない
       const isImageDataUrl = (v) =>
-        typeof v === "string" && /^data:[a-z0-9.+/-]*;base64,[A-Za-z0-9+/=\s]*$/i.test(v);
+        typeof v === "string" && /^data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=\s]*$/i.test(v);
       function fmtDate(v) {
         if (!v) return "";
         let p = v.split("-");
@@ -2585,7 +2593,8 @@
       }
       function common() {
         let code = $("code")
-          .value.trim()
+          .value.normalize("NFKC")
+          .trim()
           .replace(/[^A-Za-z0-9]/g, "")
           .toUpperCase();
         if (!isComposingIn("code")) $("code").value = code;
@@ -3125,11 +3134,37 @@
         if (!rec || typeof rec !== "object" || !Array.isArray(rec.cuts)) return null;
         return Object.assign({}, rec, { id: e.id });
       }
+      // 上書き保存の前に、札が指す中身が残っているか確かめる。消えていれば、今保存されている同じ話数の札に差し替える
+      async function repairStubs() {
+        const stubs = episodes.filter((e) => e.id !== activeEp && isEpStub(e));
+        if (!stubs.length || !idb.db) return;
+        const m = await idb.getMany("kv", stubs.map((e) => e.key));
+        if (!m) return;
+        let cur = [];
+        try {
+          cur = (JSON.parse(localStorage.getItem(KEY2) || "null") || {}).episodes || [];
+        } catch (e) {}
+        const lost = [];
+        for (const st of stubs) {
+          if (m.has(st.key)) continue;
+          const alt = cur.find((x) => x && x.id === st.id && isEpStub(x));
+          const ok = alt && (await idb.getMany("kv", [alt.key]));
+          if (ok && ok.has(alt.key)) episodes = episodes.map((e) => (e === st ? Object.assign({}, st, { key: alt.key }) : e));
+          else lost.push(st);
+        }
+        if (lost.length)
+          showBanner(
+            `${lost.map((e) => escHtml(epLabel(e))).join("・")} の中身が見つかりません（別のタブで削除・リセットされた可能性があります）。一覧の項目は残しています。お手元のJSON保存があれば「JSON読込」で戻せます。`,
+            [],
+            "epLoad",
+          );
+      }
+      // 掃除は書いてから7日以上たったものだけ（上書き保存を待っているタブなどが、まだ参照しているかもしれない）
       async function sweepEps() {
         const keys = await idb.allKeys("kv");
         if (!keys || !keys.length) return;
         const ref = new Set(episodes.filter(isEpStub).map((e) => e.key)),
-          old = Date.now() - 600000,
+          old = Date.now() - SWEEP_GRACE,
           del = keys.filter(
             (k) =>
               typeof k === "string" &&
@@ -3287,11 +3322,17 @@
       function storedMeta() {
         try {
           let d = JSON.parse(localStorage.getItem(KEY2) || "null");
-          return d && typeof d === "object" ? { rev: d.rev | 0, tab: d.tab } : null;
+          return d && typeof d === "object"
+            ? { rev: d.rev | 0, tab: d.tab, schema: d.schemaVersion | 0 }
+            : null;
         } catch (e) {
-          return { rev: -1, tab: "" };
+          return { rev: -1, tab: "", schema: 0 };
         }
       }
+      // 保存済みのデータが、このタブが最後に読んだ／書いたもの（タブと rev の組）と違えば、別のタブが書いた。
+      // rev だけで比べると、2つのタブが同時に同じ rev を書いたときに見逃す
+      let seenTab = "";
+      const foreignMeta = (m) => !!m && !(m.tab === seenTab && m.rev === docRev);
       function schedule() {
         dirty = true;
         const now = Date.now();
@@ -3325,7 +3366,14 @@
           textOk = true;
         const doc = snapshotDoc();
         const st = storedMeta();
-        if (!overrideOnce && st && st.tab !== tabId && st.rev !== docRev) {
+        // 新しいバージョンが書いたデータは、上書き保存を選んでも上書きしない
+        if (st && st.schema > SCHEMA) {
+          saving = false;
+          dirty = true;
+          blockSave("newer");
+          return false;
+        }
+        if (!overrideOnce && foreignMeta(st)) {
           saving = false;
           dirty = true;
           blockSave("conflict");
@@ -3359,7 +3407,7 @@
         const full = doc.episodes.filter((e) => e.id !== activeEp && Array.isArray(e.cuts));
         if (full.length && idb.db && !saveBlocked) {
           const m2 = storedMeta();
-          if (!overrideOnce2 && m2 && m2.tab !== tabId && m2.rev !== docRev) {
+          if (!overrideOnce2 && foreignMeta(m2)) {
             saving = false;
             dirty = true;
             blockSave("conflict");
@@ -3373,21 +3421,34 @@
             episodes = episodes.map((e) => (e.id !== activeEp && stubs.has(e) ? stubs.get(e) : e));
           }
         }
-        overrideOnce2 = false;
         if (saveBlocked) {
+          overrideOnce2 = false;
           saving = false;
           dirty = true;
           return false;
         }
+        // 書く直前にもう一度確かめる（画像を書いている間に別のタブが保存していないか）。ここから書き込みまでは同期処理
+        const m3 = storedMeta();
+        if ((m3 && m3.schema > SCHEMA) || (!overrideOnce2 && foreignMeta(m3))) {
+          overrideOnce2 = false;
+          saving = false;
+          dirty = true;
+          blockSave(m3.schema > SCHEMA ? "newer" : "conflict");
+          return false;
+        }
+        overrideOnce2 = false;
         let quota = false;
         try {
           const text = JSON.stringify(doc);
           localStorage.setItem(KEY2, text);
           docRev = doc.rev;
+          seenTab = tabId;
           mainStoreChars = KEY2.length + text.length;
         } catch (e) {
           textOk = false;
           quota = !!(e && (e.name === "QuotaExceededError" || e.code === 22));
+          // 本体を書けなかったときは、今回書いた画像もまだ参照されていない（掃除で消されうる）ので、次の保存でもう一度書く
+          need.forEach((id) => persistedImgs.delete(id));
         }
         saving = false;
         lastOk = imgOk && textOk;
@@ -3535,11 +3596,20 @@
                 ],
                 [
                   "このタブの内容で上書き保存",
-                  () => {
-                    clearBlock();
+                  async () => {
                     const m = storedMeta();
-                    if (m) docRev = Math.max(docRev, m.rev);
-                    overrideOnce = true;
+                    if (m && m.schema > SCHEMA) {
+                      blockSave("newer");
+                      return;
+                    }
+                    clearBlock();
+                    // 別のタブが消した画像・話数の中身があっても書き直せるように、画像は全部もう一度書き、話数の札を確かめる
+                    persistedImgs.clear();
+                    await repairStubs();
+                    if (m) {
+                      docRev = m.rev;
+                      seenTab = m.tab;
+                    }
                     dirty = true;
                     flushSave();
                   },
@@ -3569,11 +3639,15 @@
           $("r").value = d.common.r || "1";
         }
         if (Array.isArray(d.processes) && d.processes.length)
-          processes = (
-            typeof d.processes[0] === "string"
-              ? d.processes.map((x) => ({ name: x, date: "" }))
-              : d.processes
-          ).filter((p) => p && p.name !== "未振分");
+          processes = d.processes
+            .map((p) =>
+              typeof p === "string"
+                ? { name: p, date: "" }
+                : p && typeof p === "object"
+                  ? { name: strOf(p.name), date: dateOf(p.date) }
+                  : null,
+            )
+            .filter((p) => p && p.name !== "未振分");
         if (d.prefs) applyPrefs(d.prefs, mode);
         updatePaperHint();
         syncShortcutTitles();
@@ -3629,14 +3703,14 @@
           seenV = new Set(),
           asIds = mode !== "json" && mode !== "legacy";
         return d.cuts.map((c, i) => {
-          c = c || {};
+          c = c && typeof c === "object" ? c : {};
           let id = typeof c.id === "string" && c.id && !seen.has(c.id) ? c.id : newId("c");
           seen.add(id);
           const pri = PRIORITIES.includes(c.priority) ? c.priority : "";
           const takeImgs = (arr, pos) => {
-            if (asIds) return (arr || []).filter((x) => typeof x === "string");
+            if (asIds) return (Array.isArray(arr) ? arr : []).filter((x) => typeof x === "string");
             const raw =
-              (arr && arr.length
+              (Array.isArray(arr) && arr.length
                 ? arr
                 : oldImgs && Array.isArray(oldImgs[pos])
                   ? oldImgs[pos]
@@ -3656,9 +3730,9 @@
                   {
                     id: vid,
                     r,
-                    retakeDate: v.retakeDate || "",
-                    body: v.body || "",
-                    note: v.note || "",
+                    retakeDate: dateOf(v.retakeDate),
+                    body: strOf(v.body),
+                    note: strOf(v.note),
                     images: takeImgs(v.images),
                   },
                   instrOf(v),
@@ -3669,8 +3743,8 @@
             if (sv < 0 || sv >= versions.length) sv = latestIdx({ versions, selectedVer: 0 });
             return {
               id,
-              cut: c.cut || "",
-              subcut: c.subcut || "",
+              cut: cleanCut(c.cut),
+              subcut: cleanCut(c.subcut),
               priority: pri,
               selectedVer: sv,
               versions,
@@ -3678,8 +3752,8 @@
           }
           return {
             id,
-            cut: c.cut || "",
-            subcut: c.subcut || "",
+            cut: cleanCut(c.cut),
+            subcut: cleanCut(c.subcut),
             priority: pri,
             selectedVer: 0,
             versions: [
@@ -3687,9 +3761,9 @@
                 {
                   id: newId("v"),
                   r: parseR(c.r != null ? c.r : defR),
-                  retakeDate: c.retakeDate || defDate,
-                  body: c.body || "",
-                  note: c.note || "",
+                  retakeDate: dateOf(c.retakeDate) || dateOf(defDate),
+                  body: strOf(c.body),
+                  note: strOf(c.note),
                   images: takeImgs(c.images, i),
                 },
                 instrOf(c),
@@ -3703,7 +3777,8 @@
         const list = (Array.isArray(d.episodes) ? d.episodes : [])
           .map((e) => {
             if (!e || typeof e.id !== "string") return null;
-            if (Array.isArray(e.cuts)) return e;
+            if (Array.isArray(e.cuts))
+              return Object.assign({}, e, { cuts: e.cuts.filter((c) => c && typeof c === "object") });
             // 開いている話数の名前だけの項目（中身は d.cuts など）
             if (e.id === d.activeEp && e.stored === "main") return { id: e.id, stored: "main", common: e.common };
             if (!isEpStub(e)) return null;
@@ -3758,11 +3833,12 @@
           return false;
         }
       }
+      const SWEEP_GRACE = 7 * 24 * 3600000;
       async function sweepImgs() {
         const keys = await idb.allKeys("imgs");
         if (!keys || !keys.length) return;
         const ref = new Set(allRefImgIds()),
-          old = Date.now() - 600000,
+          old = Date.now() - SWEEP_GRACE,
           del = keys.filter((k) => !ref.has(k) && idTime(k) < old);
         if (del.length) idb.delMany("imgs", del);
       }
@@ -3835,7 +3911,8 @@
           }
           if (!d || typeof d !== "object" || !Array.isArray(d.cuts)) {
             try {
-              localStorage.setItem(KEY2 + ".broken", raw);
+              // 前に退避した .broken は上書きしない
+              localStorage.setItem(KEY2 + (localStorage.getItem(KEY2 + ".broken") == null ? ".broken" : ".broken." + Date.now()), raw);
             } catch (e) {}
             block = "broken";
           } else if ((d.schemaVersion | 0) > SCHEMA) block = "newer";
@@ -3860,19 +3937,26 @@
       // 開いている話数の画像を IndexedDB から読む。無くなっていた画像は外して知らせる
       async function loadStoredImages() {
         const ids = allImgIds();
-        let missing = [];
+        let missing = [],
+          readFailed = false;
         if (ids.length) {
           const m = await idb.getMany("imgs", ids);
           if (m) {
+            // 画像として使えない値（データURL以外）は無かったものとして扱う
             m.forEach((v, k) => {
+              if (!isImageDataUrl(v)) return;
               IMG.set(k, v);
               persistedImgs.add(k);
             });
-            missing = ids.filter((id) => !m.has(id));
-          } else missing = ids;
+            missing = ids.filter((id) => !IMG.has(id));
+          } else {
+            missing = ids;
+            readFailed = true;
+          }
         }
         if (missing.length) {
-          if (idb.db) {
+          // 読み込み自体に失敗したときは参照を外さない（画像は IndexedDB に残っている）
+          if (idb.db && !readFailed) {
             const ms = new Set(missing);
             cuts.forEach((c) =>
               vers(c).forEach((v) => (v.images = (v.images || []).filter((id) => !ms.has(id)))),
@@ -3892,7 +3976,7 @@
       async function finishMigration(mode, raw) {
         const mig = MIGRATIONS[mode];
         // 更新前のデータを退避（IndexedDB に置けば localStorage の容量を使わない。置けなければ localStorage）
-        if (mode !== "legacy" && raw != null) await saveBackup(KEY2 + mig.bak, raw);
+        const bakOk = mode === "legacy" || raw == null || (await saveBackup(KEY2 + mig.bak, raw));
         dirty = true;
         const ok = await flushSave(),
           v = ok && (await verifyStored()),
@@ -3900,7 +3984,10 @@
         const msg =
           mode === "legacy"
             ? mig.msg(n)
-            : `${mig.msg(n)} 更新前のデータは ${KEY2}${mig.bak} として退避しています。` +
+            : `${mig.msg(n)} ` +
+              (bakOk
+                ? `更新前のデータは ${KEY2}${mig.bak} として退避しています。`
+                : "更新前のデータの退避は空き容量が足りずできませんでした。念のため「JSON保存」でバックアップしてください。") +
               (mode !== "v8"
                 ? " あわせて、その後の版で増えた項目（作品・話数の切り替え・撮影テイクなど）にも対応する最新の形式にしました。"
                 : "");
@@ -3912,12 +3999,26 @@
           "migrated",
         );
       }
+      // 読み込み中に想定外の形のデータで止まっても、保存を止めたまま知らせる（黙って「待機中」のままにしない）
       async function initStorage() {
+        try {
+          await initStorageInner();
+        } catch (err) {
+          console.error(err);
+          try {
+            const raw = localStorage.getItem(KEY2);
+            if (raw != null && localStorage.getItem(KEY2 + ".broken") == null) localStorage.setItem(KEY2 + ".broken", raw);
+          } catch (e) {}
+          blockSave("broken");
+        }
+      }
+      async function initStorageInner() {
         saveBlocked = "init";
         const { raw, d, mode, block } = readStored();
         if (mode && mode !== "legacy") {
           applyDoc(d, "v2");
           docRev = d.rev | 0;
+          seenTab = d.tab;
           loadToForm();
           renderAll();
         }
@@ -3947,11 +4048,14 @@
       addEventListener("storage", (e) => {
         if (e.key !== KEY2 && e.key !== null) return;
         if (saveBlocked === "reload" || saveBlocked === "init") return;
+        // 「新しいバージョン」「読み込めないデータ」で止めているときは、そのまま（上書きボタンを出さない）
+        if (saveBlocked === "newer" || saveBlocked === "broken" || saveBlocked === "brokenOld") return;
         let d = null;
         try {
           d = e.newValue ? JSON.parse(e.newValue) : null;
         } catch (x) {}
-        if (!d || (d.tab !== tabId && (d.rev | 0) !== docRev)) blockSave("conflict");
+        if (d && (d.schemaVersion | 0) > SCHEMA) blockSave("newer");
+        else if (!d || foreignMeta({ rev: d.rev | 0, tab: d.tab })) blockSave("conflict");
       });
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "hidden" && dirty) flushSave();
@@ -3960,10 +4064,11 @@
         if (!dirty || saveBlocked) return;
         try {
           const m = storedMeta();
-          if (m && m.tab !== tabId && m.rev !== docRev) return;
+          if ((m && m.schema > SCHEMA) || foreignMeta(m)) return;
           const doc = snapshotDoc();
           localStorage.setItem(KEY2, JSON.stringify(doc));
           docRev = doc.rev;
+          seenTab = tabId;
         } catch (e) {}
         flushSave();
       });
@@ -4037,6 +4142,8 @@
           el.innerHTML = `<div class="cutTop"><div class="cutMain"><div class="cutNo"><span class="cutName" title="${escHtml(dispName(c) || "未入力")}">${escHtml(dispName(c) || "未入力")}</span>${vs.length > 1 ? `<span class="verN">${vs.length}版</span>` : ""}${c.priority ? `<span class="badge ${priCls}">${escHtml(c.priority)}</span>` : ""}</div><div class="file" title="${escHtml(fname(c))}">${escHtml(fname(c))}</div></div><label class="doneTick" title="最新の版の作業済み"><input type="checkbox" class="doneBox" ${latestDone ? "checked" : ""}>最新 ${rrLabel(latest.r)}${viewing ? '<span class="viewNote"> ※別の版を表示中</span>' : ""}</label></div>`;
           const box = el.querySelector(".doneBox");
           box.addEventListener("click", (ev) => ev.stopPropagation());
+          // 「最新 R-xx」の文字を押したときも、済の切り替えだけにしてカードは選ばない
+          el.querySelector(".doneTick").addEventListener("click", (ev) => ev.stopPropagation());
           box.addEventListener("change", (ev) => {
             ev.stopPropagation();
             latestVer(c).done = box.checked;
@@ -4773,35 +4880,38 @@
       addEventListener("paste", (e) => {
         if (takePastedImages(e.clipboardData)) e.preventDefault();
       });
+      // 選んだ順に、選んだ時点のカット・版へ足す（大きい画像の処理中にカットを切り替えても、別のカットに入らないように）
       function addImages(files) {
+        const target = verOf(cuts[selected]);
+        let chain = Promise.resolve();
         [...files]
           .filter((f) => f.type.startsWith("image/"))
           .forEach((f) => {
             pendingImgs++;
-            let r = new FileReader();
-            r.onload = () => {
-              let src = r.result,
-                im = new Image();
-              im.onload = () => {
-                optimizeImage(im, f.type, src.length).then((opt) => {
-                  verOf(cuts[selected]).images.push(regImg(opt || src));
+            const job = new Promise((res) => {
+              const r = new FileReader();
+              r.onload = () => {
+                const src = r.result,
+                  im = new Image();
+                im.onload = () => optimizeImage(im, f.type, src.length).then((opt) => res(opt || src));
+                im.onerror = () => res(null);
+                im.src = src;
+              };
+              r.onerror = () => res(null);
+              r.readAsDataURL(f);
+            });
+            chain = chain
+              .then(() => job)
+              .then((src) => {
+                if (src) {
+                  (target.images || (target.images = [])).push(regImg(src));
                   renderThumbs();
                   renderPreview();
+                  renderList();
                   schedule();
-                  noteImgDone();
-                });
-              };
-              im.onerror = () => {
-                failedImgs.push(f.name);
+                } else failedImgs.push(f.name);
                 noteImgDone();
-              };
-              im.src = src;
-            };
-            r.onerror = () => {
-              failedImgs.push(f.name);
-              noteImgDone();
-            };
-            r.readAsDataURL(f);
+              });
           });
       }
       function buildText() {
@@ -5135,7 +5245,8 @@
           central = [];
         let offset = 0;
         for (const f of files) {
-          const nameU8 = enc.encode(f.name),
+          // ZIP内の名前にフォルダ区切りや制御文字を入れない（展開先の外に書かれないように）
+          const nameU8 = enc.encode(String(f.name).replace(/[\\/:*?"<>|\x00-\x1f]/g, "_").replace(/^\.+/, "_")),
             data = new Uint8Array(await f.blob.arrayBuffer()),
             crc = crc32(data);
           const lh = new DataView(new ArrayBuffer(30));
@@ -5244,7 +5355,9 @@
         if (!(c.cut || "").trim()) missing.push("カット番号");
         if (!(v.body || "").trim()) missing.push("リテイク内容");
         if (missing.length) {
-          alert("次の必須項目を入力してください：\n・" + missing.join("\n・"));
+          // 全PNG（collect あり）ではカットごとに出さず、最後にまとめて知らせる
+          if (collect) collect.skipped = (collect.skipped || []).concat([[cutName(c) || "（番号なし）", missing]]);
+          else alert("次の必須項目を入力してください：\n・" + missing.join("\n・"));
           return false;
         }
         const { canvas, ctx } = prepCanvas();
@@ -5520,8 +5633,15 @@
           return;
         }
         if (
-          (v.body || v.instr || v.note || (v.images || []).length || (v.mats || []).length || cleanMatR(v.matR).some(Boolean)) &&
-          !confirm("この版の本文・修正内容・備考・画像を、一つ前の版の内容で置き換えますか？")
+          (v.body ||
+            v.instr ||
+            v.note ||
+            (v.images || []).length ||
+            (v.mats || []).length ||
+            cleanMatR(v.matR).some(Boolean) ||
+            cleanTakeType(v.takeType) ||
+            Object.values(cleanTakeNo(v.takeNo)).some(Boolean)) &&
+          !confirm("この版の本文・修正内容・備考・画像・撮入れ素材・撮影テイク・リテイク日を、一つ前の版の内容で置き換えますか？")
         )
           return;
         v.body = p.body || "";
@@ -5553,20 +5673,15 @@
         renderAll();
         schedule();
       };
-      $("prev").onclick = () => {
-        if (dirty) flushSave();
-        selected = Math.max(0, selected - 1);
-        loadToForm();
-        renderAll();
-        revealActive();
-      };
-      $("next").onclick = () => {
-        if (dirty) flushSave();
-        selected = Math.min(cuts.length - 1, selected + 1);
-        loadToForm();
-        renderAll();
-        revealActive();
-      };
+      // 前／次は一覧に見えている順（検索・すべて／未了／済の絞り込み）で動く
+      function stepCut(d) {
+        if (!listOrder.length) return;
+        const pos = listOrder.indexOf(selected),
+          to = pos < 0 ? (d > 0 ? 0 : listOrder.length - 1) : Math.max(0, Math.min(listOrder.length - 1, pos + d));
+        selectCut(listOrder[to]);
+      }
+      $("prev").onclick = () => stepCut(-1);
+      $("next").onclick = () => stepCut(1);
       // 一覧にフォーカスがあるとき: ↑↓で選択、Enterで入力欄、Spaceで最新の版の済／未
       $("list").addEventListener("keydown", (e) => {
         if (e.target !== $("list") || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
@@ -5623,12 +5738,14 @@
             cutName(a).localeCompare(cutName(b), "ja")
           );
         });
+        // = + - @ で始まるとExcelが数式として動かすので、先頭に ' を付けて文字として開かせる
         const cell = (v) => {
-          v = (v || "").replace(/\r\n?/g, "\n");
+          v = String(v == null ? "" : v).replace(/\r\n?/g, "\n");
+          if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
           return /["\t\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
         };
         const body = sorted
-          .map((c, i) => [i + 1, c.cut || "", cell(latestVer(c).body), c.subcut || ""].join("\t"))
+          .map((c, i) => [i + 1, cell(c.cut), cell(latestVer(c).body), cell(c.subcut)].join("\t"))
           .join("\r\n");
         download(
           `retake_list_${common().code || "work"}_${common().ep || "ep"}.tsv`,
@@ -5702,8 +5819,23 @@
       $("load").onchange = (e) => {
         let f = e.target.files[0];
         if (!f) return;
+        // 極端に大きいファイルは読まない（タブが固まらないように）
+        if (f.size > 300 * 1024 * 1024) {
+          alert("ファイルが大きすぎます（300MBまで）。AniRetakeの「JSON保存」で出力したファイルか確認してください。");
+          e.target.value = "";
+          return;
+        }
         let r = new FileReader();
         r.onload = async () => {
+          try {
+            await importJson(e);
+          } catch (err) {
+            console.error(err);
+            alert("JSONの読み込み中に問題が起きました。内容が想定と違う可能性があります。画面の内容を確かめ、必要なら再読み込みしてからもう一度お試しください。");
+            e.target.value = "";
+          }
+        };
+        const importJson = async (e) => {
           let d;
           try {
             d = JSON.parse(r.result);
@@ -5828,6 +5960,10 @@
         r.readAsText(f);
       };
       $("reset").onclick = async () => {
+        if (saveBlocked === "conflict") {
+          alert("別のタブでデータが更新されています。全リセットは、再読み込みして最新の内容を確かめてから行ってください。");
+          return;
+        }
         if (saveBlocked === "newer") {
           alert(
             "新しいバージョンで保存されたデータがあるため、このバージョンではリセットできません。",
@@ -5856,6 +5992,7 @@
         IMG.clear();
         persistedImgs.clear();
         docRev = 0;
+        seenTab = "";
         cuts = [
           {
             id: newId("c"),
@@ -5900,19 +6037,38 @@
           if (r === false) skip++;
           else ok++;
         }
+        const skipped = files.skipped || [];
+        const skipMsg = () =>
+          skipped
+            .slice(0, 15)
+            .map(([n, m]) => `・${n}：${m.join("・")}`)
+            .join("\n") + (skipped.length > 15 ? `\n…ほか${skipped.length - 15}件` : "");
         if (!files.length) {
           $("save").textContent = "全PNG：出力できるカットがありませんでした";
+          if (skipped.length) alert("必須項目が空のため、出力できるカットがありませんでした：\n" + skipMsg());
           return;
         }
+        // 同じカット番号が複数あるとZIP内で同じ名前になり上書きされるので、2つ目以降に (2) などを付ける
+        const used = new Map();
+        files.forEach((f) => {
+          const k = f.name.toLowerCase(),
+            n = (used.get(k) || 0) + 1;
+          used.set(k, n);
+          if (n > 1) f.name = f.name.replace(/(\.png)$/i, `(${n})$1`);
+        });
         $("save").textContent = "ZIPを作成中…";
         await zipDownload(
           files,
           `retake_png_${common().code || "work"}_${common().ep || "ep"}.zip`,
         );
         $("save").textContent = `全PNG完了：ZIP ${files.length}枚 / スキップ ${skip}`;
+        if (skipped.length) alert(`必須項目が空の${skipped.length}カットは出力しませんでした：\n` + skipMsg());
       };
       $("drop").onclick = () => $("imgInput").click();
-      $("imgInput").onchange = (e) => addImages(e.target.files);
+      $("imgInput").onchange = (e) => {
+        addImages(e.target.files);
+        e.target.value = "";
+      };
       $("drop").ondragover = (e) => {
         e.preventDefault();
         $("drop").style.borderColor = "#2783DE";
@@ -5936,6 +6092,14 @@
         pvMain.classList.remove("dragging");
         addImages(e.dataTransfer.files);
       };
+      // 工程名がカードの担当欄（幅76px・最小11px）に収まらないときは入力欄を赤くして知らせる（書き出しでは枠からはみ出すため）
+      function markLongProcess(el) {
+        const ctx = markLongProcess.ctx || (markLongProcess.ctx = document.createElement("canvas").getContext("2d"));
+        ctx.font = '700 11px "Noto Sans JP",sans-serif';
+        const long = ctx.measureText(el.value).width > 74;
+        el.classList.toggle("tooLong", long);
+        el.title = long ? "長すぎてカードの担当欄からはみ出します。短くしてください（全角5文字くらいまで）" : "";
+      }
       function renderProcessSettings() {
         let box = $("processList");
         box.innerHTML = "";
@@ -5945,14 +6109,15 @@
           row.innerHTML = `<input value="${escHtml(p.name)}" data-pi="${i}"><input type="date" value="${escHtml(p.date || "")}" data-date="${i}"><button class="small" data-up="${i}" ${i === 0 ? "disabled" : ""}>↑</button><button class="small" data-down="${i}" ${i === processes.length - 1 ? "disabled" : ""}>↓</button><button class="small danger" data-rm="${i}">削除</button>`;
           box.appendChild(row);
         });
-        box.querySelectorAll("[data-pi]").forEach(
-          (el) =>
-            (el.oninput = () => {
-              processes[+el.dataset.pi].name = el.value;
-              renderPreview();
-              schedule();
-            }),
-        );
+        box.querySelectorAll("[data-pi]").forEach((el) => {
+          markLongProcess(el);
+          el.oninput = () => {
+            processes[+el.dataset.pi].name = el.value;
+            markLongProcess(el);
+            renderPreview();
+            schedule();
+          };
+        });
         box.querySelectorAll("[data-date]").forEach(
           (el) =>
             (el.oninput = () => {
@@ -6058,6 +6223,11 @@
         $("clearBackups").disabled = !keys.length && !ik.length;
       }
       $("clearBackups").onclick = async () => {
+        // 読み込めなかったデータ（.broken）や旧データしか残っていない状態では消させない
+        if (saveBlocked === "broken" || saveBlocked === "brokenOld" || saveBlocked === "newer") {
+          alert("保存データを確認中のため、今は退避データを削除できません。");
+          return;
+        }
         const keys = backupKeys(),
           ik = await idbBackupKeys();
         if (!keys.length && !ik.length) return;
@@ -6102,7 +6272,11 @@
         schedule();
       };
       $("resetProcess").onclick = () => {
-        if (confirm("工程設定を初期状態（演出〜撮影の10工程）に戻しますか？")) {
+        if (
+          confirm(
+            `工程設定を初期状態（${DEFAULT_PROCESSES.map((p) => p.name).join("・")} の${DEFAULT_PROCESSES.length}工程）に戻しますか？`,
+          )
+        ) {
           processes = JSON.parse(JSON.stringify(DEFAULT_PROCESSES));
           renderProcessSettings();
           renderPreview();
@@ -6228,6 +6402,16 @@
           }
           return;
         }
+        // 環境設定・ヘルプを開いている間はショートカットを効かせない（裏でカットが増えないように）。Escで閉じる
+        const modal = document.querySelector("#settingsModal.show, #helpModal.show");
+        if (modal) {
+          if (e.key === "Escape" && !e.isComposing && e.keyCode !== 229) {
+            e.preventDefault();
+            if (modal.id === "settingsModal") stopShortcutListen();
+            modal.classList.remove("show");
+          }
+          return;
+        }
         if (
           e.key === "Escape" &&
           !e.isComposing &&
@@ -6249,15 +6433,16 @@
           tag === "select" ||
           !!(e.target && e.target.isContentEditable);
         const allow = (sc) => !typing || !!(sc && (sc.ctrl || sc.alt));
+        // 追加・書き出し・複製はキーを押しっぱなしにしても1回だけ
         if (allow(prefs.shortcuts.add) && matchShortcut(e, prefs.shortcuts.add)) {
           e.preventDefault();
-          $("add").click();
+          if (!e.repeat) $("add").click();
         } else if (allow(prefs.shortcuts.export) && matchShortcut(e, prefs.shortcuts.export)) {
           e.preventDefault();
-          exportPng();
+          if (!e.repeat) $("png").click();
         } else if (allow(prefs.shortcuts.dup) && matchShortcut(e, prefs.shortcuts.dup)) {
           e.preventDefault();
-          $("dup").click();
+          if (!e.repeat) $("dup").click();
         } else if (allow(prefs.shortcuts.prev) && matchShortcut(e, prefs.shortcuts.prev)) {
           e.preventDefault();
           $("prev").click();
@@ -6271,7 +6456,7 @@
         document.title = APP_NAME + " v" + APP_VERSION + " - リテイク指示カード";
         $("helpTitle").textContent = APP_NAME + " バージョン " + APP_VERSION;
         $("helpBody").textContent =
-          `【${APP_NAME}】 バージョン ${APP_VERSION}\n\n■ 用途\nアニメ制作のリテイク指示カードを作成し、印刷・共有用PNGとして書き出します。\n\n■ 免責事項\n・本ソフトウェアは現状のまま提供され、動作や結果について一切の保証をしません。\n・本ソフトウェアの使用、または使用できなかったことによって生じた損害\n　（データの消失・破損、業務上の損失などを含みます）について、開発者は責任を負いません。\n・重要なデータを編集する前に、必ずバックアップ（JSON保存）を取ってください。\n・予告なく機能や仕様の変更、開発の終了を行う場合があります。\n\n■ 使用しているソフトウェア\n・ブラウザ標準 Web API（Canvas / FileReader / localStorage など）\n・追加の外部ライブラリはありません\n・ライセンス：MIT License\n\n■ ショートカット\n${SHORTCUT_ACTIONS.map((a) => "・" + formatShortcut(prefs.shortcuts[a.id]) + " … " + a.label).join("\n")}\n\n■ 版（R回数）\nカットごとに過去の版を残せます。「新しい版を作る」で次のRが空で追加されます。Rの数字を直しても新しい版は増えません。\n全PNG・テキスト・TSVは各カットの最新版（Rが一番大きい版）を出します。画面のPNGは表示中の版です。\n\n■ 修正内容\nリテイク内容とは別の欄です。版ごとに保存し、文字色（黒・赤・青）も版ごとに選べます。空でもカードに欄を出します。\n参考画像は1枚目だけを修正内容の下に出し、2枚目以降は別ページ（1ページ4枚・左上から）です。\n優先度はカード見出しの左端に出します。\n各版に「作業済み」を付けられます。入力欄のチェックは今見ている版、一覧のチェックは最新の版です。印刷用のカードには出しません。\n「入力だけ見る」でプレビューを隠せます。\n\n■ 画面の配置\n上部バーに作品コード・話数・初期R、保存状態、PNG書き出し・全PNG・「出力・保存」メニュー（テキスト・TSV・JSON・状況をコピー・全リセット）、環境設定、ヘルプがあります。\n左はカット一覧、中央は入力欄、右はプレビューです。画面が狭いとき（約1180px以下）は、カット名の横の「入力」「プレビュー」で表示を切り替えます。\nプレビューの大きさは「全体」（カード全体が画面に収まる。最大100%）／「幅」（欄の幅に合わせる）／「100%」で切り替えます。列の境目をドラッグすると一覧・プレビューの幅を変えられ、ダブルクリックで自動に戻ります。\nプレビューをクリックするか「拡大」で画面いっぱいに表示します（もう一度クリックかEscで戻る）。拡大中も前／次のカットのショートカットが使えます。\n\n■ カット一覧のキー操作\n一覧をクリックしたあと、↑↓で選択、Home／Endで先頭／末尾、Enterでリテイク内容の入力欄へ、Spaceで最新の版の済／未を切り替えます。入力欄でEscを押すと一覧へ戻ります（日本語の変換中は除く）。\n一覧の上の「すべて／未了／済」の札で、最新の版の状態で絞り込めます（「未了」が以前の「作業済みを隠す」）。\n\n■ 撮影テイク\n版の欄の「撮影」で、本撮（v）・T撮（t）・線撮（s）のどれかを選び（もう一度押すと外す）、種類ごとにテイク番号を入れます。カードではリテイク欄の右に3段で出し、選んだ種類を赤丸で囲み、番号は v-01 のように2桁で出します。番号が空でも v- までは出すので手書きできます。テキスト出力にも出します。\n記号（v / t / s）は撮影会社の表記に合わせて、環境設定の「撮影テイクの記号」で変えられます。\n\n■ 撮入れ素材\n版ごとに、撮影に入れる素材（TP・BG・CG・2D・撮R）にチェックを付けられます。カードでは修正内容欄の右端に「撮入れ」の縦枠を出し、6枠すべてを□付きで並べます。チェックした素材だけ□に赤い印が付きます。6枠目は初期では名前のない□だけの枠で、印刷後の手書きに使えます。右隣の「R」列は素材ごとのR回数の欄です。入力欄で素材名の横にR回数を入れるとカードに出ます。空欄なら手書き用に空けておきます。\n枠の名前は環境設定の「撮入れ素材の名前」で変えられます（2文字がおすすめ）。名前を変えても付けたチェックは残ります。テキスト出力にも出します（表用TSVには出しません）。\n入力欄を触っている間は、プレビューの対応する欄が青く光ります（画面表示だけで、書き出しには出ません）。\n\n■ 作品・話数の切り替え\n上部の「話数 ▾」から、保存済みの作品・話数を切り替えます。「＋ 新しい話数を作る」は同じ作品コードで次の話数を作ります（工程名は引き継ぎ、日付は空）。カット・工程の日付・選択位置は話数ごと、用紙・ショートカット・撮入れ素材名・列幅は全話数で共通です。\n全PNG・テキスト・TSV・JSON保存は、開いている話数だけを出します。JSON読込は、同じ作品・話数が保存済みならそこを置き換え（確認あり）、無ければ新しい話数として追加します。\n\n■ 版の操作\n「新しい版を作る」は最大Rの次を空で追加します。Rの数字を直しても新しい版は増えません。同じカットに同じRは持てません。最後の1版は削除できません。カットの削除は全版を消します。\n\n■ 参考画像\n1枚目だけを修正内容の下に出します。2枚目以降は別ページ（1ページ最大4枚、左上から）です。追加はD&DまたはCtrl+V。サムネイルの→で他のカットへ移動・コピー、◀▶で順序変更、✕で外します（画像のクリックでは消えません）。\n「状況をコピー」は、版番号・カット数・画像の枚数・保存状態だけをコピーします。本文と画像そのものは含みません。\n\n■ アプリとしてインストール\nGitHub Pages 版を Chrome / Edge で開くと、上部に「⤓ インストール」が出ます（アドレスバー右のインストールのアイコンでも可）。押すと独立したウィンドウのアプリになり、スタートメニュー・Dock から起動でき、オフラインでも使えます。Mac の Safari は「ファイル」→「Dockに追加」です。\nインストールしたアプリのデータは、そのブラウザで開いた GitHub Pages 版と同じです。index.html をファイルとして開いた場合とは別のデータになります。\n\n■ データの保存場所\nテキスト・設定・開いている話数は localStorage キー：${KEY2}\n画像と、開いていない話数の中身は IndexedDB（ブラウザ内・大容量）に保存\n旧形式のデータ（${KEY}）は移行後もバックアップとして残しています\n（サイトごと。GitHub Pages とローカルファイルでは別データになります）\n\n■ サポート・公式情報\nFANBOX：https://akira0w0.fanbox.cc/\nX（旧Twitter）：https://x.com/Akira_0m0_\nGitHub：https://github.com/akira-t5/AniRetake\n変更履歴：https://github.com/akira-t5/AniRetake/blob/main/CHANGELOG.md\n\n(c) 2026 アキラ`;
+          `【${APP_NAME}】 バージョン ${APP_VERSION}\n\n■ 用途\nアニメ制作のリテイク指示カードを作成し、印刷・共有用PNGとして書き出します。\n\n■ 免責事項\n・本ソフトウェアは現状のまま提供され、動作や結果について一切の保証をしません。\n・本ソフトウェアの使用、または使用できなかったことによって生じた損害\n　（データの消失・破損、業務上の損失などを含みます）について、開発者は責任を負いません。\n・重要なデータを編集する前に、必ずバックアップ（JSON保存）を取ってください。\n・予告なく機能や仕様の変更、開発の終了を行う場合があります。\n\n■ 使用しているソフトウェア\n・ブラウザ標準 Web API（Canvas / FileReader / localStorage など）\n・追加の外部ライブラリはありません\n・ライセンス：MIT License\n\n■ ショートカット\n${SHORTCUT_ACTIONS.map((a) => "・" + formatShortcut(prefs.shortcuts[a.id]) + " … " + a.label).join("\n")}\n\n■ 版（R回数）\nカットごとに過去の版を残せます。「新しい版を作る」で次のRが空で追加されます。Rの数字を直しても新しい版は増えません。\n全PNG・テキスト・TSVは各カットの最新版（Rが一番大きい版）を出します。画面のPNGは表示中の版です。\n\n■ 修正内容\nリテイク内容とは別の欄です。版ごとに保存し、文字色（黒・赤・青）も版ごとに選べます。空でもカードに欄を出します。\n参考画像は1枚目だけを修正内容の下に出し、2枚目以降は別ページ（1ページ4枚・左上から）です。\n優先度はカード見出しの左端に出します。\n各版に「作業済み」を付けられます。入力欄のチェックは今見ている版、一覧のチェックは最新の版です。印刷用のカードには出しません。\n「入力だけ見る」でプレビューを隠せます。\n\n■ 画面の配置\n上部バーに作品コード・話数・初期R、保存状態、PNG書き出し・全PNG・「出力・保存」メニュー（テキスト・TSV・JSON・状況をコピー・全リセット）、環境設定、ヘルプがあります。\n左はカット一覧、中央は入力欄、右はプレビューです。画面が狭いとき（約1180px以下）は、カット名の横の「入力」「プレビュー」で表示を切り替えます。\nプレビューの大きさは「全体」（カード全体が画面に収まる。最大100%）／「幅」（欄の幅に合わせる）／「100%」で切り替えます。列の境目をドラッグすると一覧・プレビューの幅を変えられ、ダブルクリックで自動に戻ります。\nプレビューをクリックするか「拡大」で画面いっぱいに表示します（もう一度クリックかEscで戻る）。拡大中も前／次のカットのショートカットが使えます。\n\n■ カット一覧のキー操作\n一覧をクリックしたあと、↑↓で選択、Home／Endで先頭／末尾、Enterでリテイク内容の入力欄へ、Spaceで最新の版の済／未を切り替えます。入力欄でEscを押すと一覧へ戻ります（日本語の変換中は除く）。\n一覧の上の「すべて／未了／済」の札で、最新の版の状態で絞り込めます（「未了」が以前の「作業済みを隠す」）。\n\n■ 撮影テイク\n版の欄の「撮影」で、本撮（v）・T撮（t）・線撮（s）のどれかを選び（もう一度押すと外す）、種類ごとにテイク番号を入れます。カードではリテイク欄の右に3段で出し、選んだ種類を赤丸で囲み、番号は v-01 のように2桁で出します。番号が空でも v- までは出すので手書きできます。テキスト出力にも出します。\n記号（v / t / s）は撮影会社の表記に合わせて、環境設定の「撮影テイクの記号」で変えられます。\n\n■ 撮入れ素材\n版ごとに、撮影に入れる素材（セル・BG・CG・2D・撮R）にチェックを付けられます。カードでは修正内容欄の右端に「撮入れ」の縦枠を出し、6枠すべてを□付きで並べます。チェックした素材だけ□に赤い印が付きます。6枠目は初期では名前のない□だけの枠で、印刷後の手書きに使えます。右隣の「R」列は素材ごとのR回数の欄です。入力欄で素材名の横にR回数を入れるとカードに出ます。空欄なら手書き用に空けておきます。\n枠の名前は環境設定の「撮入れ素材の名前」で変えられます（2文字がおすすめ）。名前を変えても付けたチェックは残ります。テキスト出力にも出します（表用TSVには出しません）。\n入力欄を触っている間は、プレビューの対応する欄が青く光ります（画面表示だけで、書き出しには出ません）。\n\n■ 作品・話数の切り替え\n上部の「話数 ▾」から、保存済みの作品・話数を切り替えます。「＋ 新しい話数を作る」は同じ作品コードで次の話数を作ります（工程名は引き継ぎ、日付は空）。カット・工程の日付・選択位置は話数ごと、用紙・ショートカット・撮入れ素材名・列幅は全話数で共通です。\n全PNG・テキスト・TSV・JSON保存は、開いている話数だけを出します。JSON読込は、同じ作品・話数が保存済みならそこを置き換え（確認あり）、無ければ新しい話数として追加します。\n\n■ 版の操作\n「新しい版を作る」は最大Rの次を空で追加します。Rの数字を直しても新しい版は増えません。同じカットに同じRは持てません。最後の1版は削除できません。カットの削除は全版を消します。\n\n■ 参考画像\n1枚目だけを修正内容の下に出します。2枚目以降は別ページ（1ページ最大4枚、左上から）です。追加はD&DまたはCtrl+V。サムネイルの→で他のカットへ移動・コピー、◀▶で順序変更、✕で外します（画像のクリックでは消えません）。\n「状況をコピー」は、版番号・カット数・画像の枚数・保存状態だけをコピーします。本文と画像そのものは含みません。\n\n■ アプリとしてインストール\nGitHub Pages 版を Chrome / Edge で開くと、上部に「⤓ インストール」が出ます（アドレスバー右のインストールのアイコンでも可）。押すと独立したウィンドウのアプリになり、スタートメニュー・Dock から起動でき、オフラインでも使えます。Mac の Safari は「ファイル」→「Dockに追加」です。\nインストールしたアプリのデータは、そのブラウザで開いた GitHub Pages 版と同じです。index.html をファイルとして開いた場合とは別のデータになります。\n\n■ データの保存場所\nテキスト・設定・開いている話数は localStorage キー：${KEY2}\n画像と、開いていない話数の中身は IndexedDB（ブラウザ内・大容量）に保存\n旧形式のデータ（${KEY}）は移行後もバックアップとして残しています\n（サイトごと。GitHub Pages とローカルファイルでは別データになります）\n\n■ サポート・公式情報\nFANBOX：https://akira0w0.fanbox.cc/\nX（旧Twitter）：https://x.com/Akira_0m0_\nGitHub：https://github.com/akira-t5/AniRetake\n変更履歴：https://github.com/akira-t5/AniRetake/blob/main/CHANGELOG.md\n\n(c) 2026 アキラ`;
       }
       $("helpBtn").onclick = () => {
         fillHelp();
@@ -6340,7 +6525,7 @@
         const m = await idb.getMany("imgs", need);
         const missing = [];
         need.forEach((id) => {
-          if (m && m.has(id)) {
+          if (m && m.has(id) && isImageDataUrl(m.get(id))) {
             IMG.set(id, m.get(id));
             persistedImgs.add(id);
           } else missing.push(id);
@@ -6383,7 +6568,14 @@
           "epLoad",
         );
       }
-      async function switchEpisode(id) {
+      // 話数の切り替えは1つずつ順に行う（続けて押したり、JSON読込と重なったりしても、途中の編集を失わないように）
+      let epQueue = Promise.resolve();
+      function switchEpisode(id) {
+        const run = epQueue.then(() => switchEpisodeNow(id));
+        epQueue = run.catch(() => {});
+        return run;
+      }
+      async function switchEpisodeNow(id) {
         if (saveBlocked === "newer") return false;
         if (id === activeEp) return true;
         await waitImgs();
