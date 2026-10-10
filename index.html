@@ -2084,6 +2084,423 @@
         border-color: #c0392b;
         background: #fdf0ee;
       }
+      /* ===== v2.0.0 一覧入力モード ===== */
+      .viewSeg,
+      .gridSeg {
+        display: inline-flex;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        flex: none;
+      }
+      .viewSeg button,
+      .gridSeg button {
+        border: 0;
+        background: #fff;
+        padding: 6px 12px;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--sub);
+        cursor: pointer;
+      }
+      .viewSeg button + button,
+      .gridSeg button + button {
+        border-left: 1px solid var(--line);
+      }
+      .viewSeg button.on,
+      .gridSeg button.on {
+        background: var(--blue);
+        color: #fff;
+      }
+      .gridPane {
+        display: none;
+      }
+      .app.gridMode {
+        grid-template-columns: var(--sideW, 248px) minmax(0, 1fr);
+      }
+      .app.gridMode.gridB {
+        grid-template-columns: var(--sideW, 248px) minmax(360px, 420px) minmax(0, 1fr);
+      }
+      .app.gridMode .splitter {
+        display: none;
+      }
+      .app.gridMode:not(.gridB) .form {
+        display: none;
+      }
+      /* 表示しないプレビューも、文字数の上限を測れるよう画面外で描画を続ける */
+      .app.gridMode .preview {
+        position: fixed;
+        left: -20000px;
+        top: 0;
+        width: 1320px;
+        height: 960px;
+        visibility: hidden;
+        pointer-events: none;
+      }
+      .app.gridMode .gridPane {
+        display: flex;
+        flex-direction: column;
+        grid-row: 2;
+        grid-column: 2 / -1;
+        min-height: 0;
+        min-width: 0;
+        background: #fff;
+      }
+      .app.gridMode.gridB .gridPane {
+        grid-column: 3;
+        border-left: 1px solid var(--line);
+      }
+      .gridHead {
+        display: flex;
+        align-items: center;
+        gap: 8px 10px;
+        flex-wrap: wrap;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+      .gridHead h2 {
+        font-size: 14px;
+        margin: 0;
+      }
+      .gridHead .hint {
+        font-size: 12px;
+        color: var(--sub);
+      }
+      .gridHead .sp {
+        flex: 1;
+      }
+      .gridHead .btn {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      .gridMsg {
+        font-size: 12px;
+        color: #b05000;
+        background: #fff7e6;
+        border: 1px solid #f0d7a8;
+        border-radius: 6px;
+        padding: 3px 8px;
+        display: none;
+        max-width: 100%;
+      }
+      .gridMsg.show {
+        display: inline-block;
+      }
+      .gridScroll {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+      }
+      table.rgrid {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+        table-layout: fixed;
+        font-size: 13px;
+      }
+      .rgrid th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #f3f2f0;
+        color: #555;
+        font-size: 12px;
+        font-weight: 700;
+        text-align: left;
+        padding: 7px 8px;
+        border-bottom: 1px solid #d9d7d3;
+        border-right: 1px solid var(--line);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .rgrid td {
+        border-bottom: 1px solid var(--line);
+        border-right: 1px solid var(--line);
+        padding: 0;
+        vertical-align: top;
+        background: #fff;
+        cursor: cell;
+      }
+      .rgrid td .gc {
+        padding: 6px 8px;
+        min-height: 32px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 6.4em;
+        overflow: hidden;
+      }
+      .rgrid td.num .gc {
+        color: var(--sub);
+        text-align: right;
+        cursor: pointer;
+      }
+      .rgrid td.nowrap .gc {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .rgrid td.cutCol .gc {
+        font-weight: 800;
+      }
+      .rgrid td.ctr .gc {
+        text-align: center;
+      }
+      .rgrid td.red .gc {
+        color: #c0392b;
+      }
+      .rgrid tr.done td {
+        background: #f5faf7;
+      }
+      .rgrid tr.done td .gc {
+        color: #8a8f8c;
+      }
+      .rgrid tr.sel td {
+        background: #f4f9fe;
+      }
+      .rgrid td.act {
+        outline: 2px solid var(--blue);
+        outline-offset: -2px;
+      }
+      .rgrid tr.newRow td .gc {
+        color: #b5b2ad;
+      }
+      .gNew {
+        font-size: 12px;
+      }
+      .rgrid .pri {
+        display: inline-block;
+        padding: 0 7px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .rgrid .pri.hi {
+        background: #fde8e5;
+        color: #c0392b;
+      }
+      .rgrid .pri.mk {
+        background: #fff3d6;
+        color: #9a6a00;
+      }
+      .rgrid .pri.pr {
+        background: #e8f1fd;
+        color: #1f6fbf;
+      }
+      .gChip {
+        display: inline-block;
+        border: 1px solid #d7d4cf;
+        border-radius: 4px;
+        padding: 0 5px;
+        margin: 0 3px 2px 0;
+        font-size: 11px;
+      }
+      .gChip small {
+        margin-left: 2px;
+        color: #c0392b;
+      }
+      .gTake {
+        display: inline-block;
+        border: 1.5px solid #c0392b;
+        color: #c0392b;
+        border-radius: 999px;
+        padding: 0 6px;
+        font-size: 11px;
+        font-weight: 800;
+      }
+      .gCheck {
+        font-weight: 800;
+        font-size: 12px;
+      }
+      .gCheck.ok {
+        color: var(--green);
+      }
+      .gCheck.ng {
+        color: #c0392b;
+      }
+      .gCheck.hold {
+        color: #9a6a00;
+      }
+      .gDone {
+        width: 15px;
+        height: 15px;
+        border: 1.5px solid #9a9893;
+        border-radius: 3px;
+        display: inline-block;
+        vertical-align: middle;
+        position: relative;
+        cursor: pointer;
+      }
+      .gDone.on {
+        background: var(--green);
+        border-color: var(--green);
+      }
+      .gDone.on::after {
+        content: "";
+        position: absolute;
+        left: 4px;
+        top: 1px;
+        width: 4px;
+        height: 8px;
+        border: solid #fff;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+      }
+      /* セルに重ねる入力欄。打ち始めるまでは見えない（日本語入力もそのまま始められる） */
+      .gridEdit {
+        position: absolute;
+        z-index: 3;
+        margin: 0;
+        border: 0;
+        outline: none;
+        resize: none;
+        padding: 6px 8px;
+        font: inherit;
+        font-size: 13px;
+        line-height: 1.45;
+        background: transparent;
+        color: transparent;
+        caret-color: transparent;
+        overflow: hidden;
+        box-sizing: border-box;
+        pointer-events: none;
+      }
+      .gridEdit.editing {
+        pointer-events: auto;
+        background: #fff;
+        color: var(--text);
+        caret-color: auto;
+        outline: 2px solid var(--blue);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+        overflow: auto;
+        max-height: 50vh;
+      }
+      .gridChoice {
+        position: absolute;
+        z-index: 4;
+        display: none;
+        font: inherit;
+        font-size: 13px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+        min-width: 110px;
+      }
+      .gridFoot {
+        padding: 7px 14px;
+        font-size: 12px;
+        color: var(--sub);
+        border-top: 1px solid var(--line);
+        display: flex;
+        gap: 6px 16px;
+        flex-wrap: wrap;
+        background: #fafaf9;
+      }
+      .gridFoot kbd {
+        border: 1px solid #d6d3ce;
+        border-bottom-width: 2px;
+        border-radius: 4px;
+        padding: 0 5px;
+        font-size: 11px;
+        background: #fff;
+        color: #444;
+      }
+      .impChips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 8px 0;
+      }
+      .impChip {
+        border-radius: 999px;
+        padding: 2px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        background: #f0efed;
+      }
+      .impChip.new,
+      .impChip.newVer {
+        background: #e5f2fc;
+        color: #1f6fbf;
+      }
+      .impChip.update {
+        background: #fff3d6;
+        color: #9a6a00;
+      }
+      .impChip.error {
+        background: #fde8e5;
+        color: #c0392b;
+      }
+      .impChip.kenyo {
+        background: #eef6f1;
+        color: #2e7d55;
+      }
+      .impWarn {
+        color: #b05000;
+        font-size: 13px;
+      }
+      .impList {
+        max-height: 46vh;
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+      .impTable {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      .impTable th,
+      .impTable td {
+        border-bottom: 1px solid var(--line);
+        padding: 4px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+      .impTable th {
+        position: sticky;
+        top: 0;
+        background: #f3f2f0;
+      }
+      .impTable tr.error td {
+        color: #c0392b;
+      }
+      .impTable tr.same td {
+        color: var(--sub);
+      }
+      .impTable tr.warn td:last-child {
+        color: #b05000;
+      }
+      .dialog.wide {
+        width: min(860px, 94vw);
+      }
+      #pasteImportText {
+        width: 100%;
+        min-height: 220px;
+        font: inherit;
+        font-size: 12px;
+      }
+      @media (max-width: 1180px) {
+        .app.gridMode,
+        .app.gridMode.gridB {
+          grid-template-columns: 220px minmax(0, 1fr);
+        }
+        .app.gridMode .work {
+          display: none;
+        }
+        .app.gridMode .gridPane,
+        .app.gridMode.gridB .gridPane {
+          grid-column: 2;
+        }
+      }
+      @media (max-width: 760px) {
+        .app.gridMode .gridPane {
+          height: 80vh;
+        }
+      }
     </style>
   </head>
   <body>
@@ -2119,6 +2536,9 @@
             ><span><span class="tbLong">新規カットの</span>初期R</span><input id="r" value="1"
           /></label>
         </div>
+        <div class="viewSeg" id="viewSeg" role="group" aria-label="表示の切り替え"
+          ><button data-view="card" class="on" title="カードを1枚ずつ編集する">カード</button
+          ><button data-view="grid" title="全カットを表で見ながら続けて入力する（オールラッシュ向け）">一覧入力</button></div>
         <div class="status" id="save">自動保存：待機中</div>
         <div class="tbActions">
           <button class="btn primary" id="png" title="Ctrl/⌘+S">PNG書き出し</button
@@ -2132,6 +2552,18 @@
               ><button class="menuItem" id="copy">テキストをコピー</button
               ><button class="menuItem" id="tsv">
                 表用TSV出力<small>A:番号 B:カット C:内容 D:兼用</small>
+              </button>
+              <div class="menuGroup">表（スプレッドシート）</div>
+              <button class="menuItem" data-table="list">
+                表を書き出し：一覧型<small>xlsx・カードの項目を列に</small></button
+              ><button class="menuItem" data-table="check">
+                表を書き出し：作業チェック型<small>xlsx・撮入れを素材ごとの列＋担当・戻し日・確認</small></button
+              ><button class="menuItem" data-table="template">
+                読み込み用テンプレート<small>xlsx・スプレッドシートで入力して読み込む</small></button
+              ><button class="menuItem" data-table="importFile">
+                表を読み込む（ファイル）<small>xlsx・CSV</small></button
+              ><button class="menuItem" data-table="importPaste">
+                表を読み込む（貼り付け）<small>スプレッドシートの範囲をコピーして貼る</small>
               </button>
               <div class="menuGroup">バックアップ</div>
               <button
@@ -2372,6 +2804,81 @@
         </div>
       </main>
       </div>
+      <main class="gridPane" id="gridPane" aria-label="一覧入力">
+        <div class="gridHead">
+          <h2>一覧入力</h2>
+          <span class="hint" id="gridCount"></span>
+          <span class="gridSeg" id="gridLayoutSeg" role="group" aria-label="一覧の形"
+            ><button data-layout="A" title="表を画面いっぱいに出す（全項目）">表を全面</button
+            ><button data-layout="B" title="左に入力欄を残し、右に表を出す（主な項目）">入力欄つき</button></span
+          >
+          <span class="gridMsg" id="gridMsg" role="status"></span>
+          <span class="sp"></span>
+          <details class="menu">
+            <summary class="btn secondary">表を書き出し</summary>
+            <div class="menuPanel">
+              <button class="menuItem" data-table="list">一覧型<small>xlsx・カードの項目を列に</small></button
+              ><button class="menuItem" data-table="check">
+                作業チェック型<small>xlsx・撮入れを素材ごとの列＋担当・戻し日・確認</small></button
+              ><button class="menuItem" data-table="template">
+                読み込み用テンプレート<small>xlsx・スプレッドシートで入力して読み込む</small>
+              </button>
+            </div>
+          </details>
+          <details class="menu">
+            <summary class="btn secondary">表を読み込む</summary>
+            <div class="menuPanel">
+              <button class="menuItem" data-table="importFile">ファイルから<small>xlsx・CSV</small></button
+              ><button class="menuItem" data-table="importPaste">
+                貼り付けて<small>スプレッドシートの範囲をコピーして貼る</small>
+              </button>
+            </div>
+          </details>
+        </div>
+        <div class="gridScroll" id="gridScroll">
+          <table class="rgrid" id="gridTable"></table>
+          <textarea class="gridEdit" id="gridEdit" aria-label="セルの入力" spellcheck="false"></textarea>
+          <select class="gridChoice" id="gridChoice" aria-label="選択肢"></select>
+        </div>
+        <div class="gridFoot">
+          <span><kbd>Enter</kbd> 確定して下へ</span><span><kbd>Tab</kbd> 右へ</span
+          ><span><kbd>Shift</kbd>+<kbd>Enter</kbd> セル内で改行</span><span><kbd>Esc</kbd> 入力の取り消し</span
+          ><span>スプレッドシートからの複数行の貼り付けに対応</span><span>日本語の変換中は移動しない</span
+          ><span>一覧の検索・絞り込みに合わせて表示</span><span>No をダブルクリック → カードで開く</span>
+        </div>
+      </main>
+      <input id="tableFile" type="file" accept=".xlsx,.csv,.tsv,.txt" style="display: none" />
+    </div>
+    <div class="modal" id="pasteModal">
+      <div class="dialog wide">
+        <div class="formHead">
+          <div>
+            <h2 style="margin: 0">表を貼り付けて読み込む</h2>
+            <div class="hint">スプレッドシートで見出し（「カット」の行）を含めて範囲をコピーし、下に貼り付けます</div>
+          </div>
+          <button class="small" id="pasteImportCancel">閉じる</button>
+        </div>
+        <textarea id="pasteImportText" placeholder="ここに貼り付け（Ctrl+V／⌘+V）"></textarea>
+        <div class="btnrow" style="margin-top: 10px">
+          <button class="btn primary" id="pasteImportOk">内容を確認する</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal" id="importModal">
+      <div class="dialog wide">
+        <div class="formHead">
+          <div>
+            <h2 style="margin: 0">表の読み込み：内容の確認</h2>
+            <div class="hint">まだ取り込んでいません。確認してから「取り込む」を押してください</div>
+          </div>
+          <button class="small" id="importCancel">やめる</button>
+        </div>
+        <div id="importSummary"></div>
+        <div class="impList" id="importList"></div>
+        <div class="btnrow" style="margin-top: 10px">
+          <button class="btn primary" id="importOk">取り込む</button>
+        </div>
+      </div>
     </div>
     <div class="modal" id="settingsModal">
       <div class="dialog">
@@ -2422,6 +2929,15 @@
             <label>線撮<input id="takeCode_s" maxlength="4" placeholder="s" /></label>
             <button class="small" id="resetTakeCodes">初期値に戻す</button>
           </div>
+        </div>
+        <div class="settingsSection">
+          <h3>兼用カット</h3>
+          <div class="hint">
+            兼用を書くと、兼用先のカットの兼用欄にもカット番号が入ります（兼用先のカットがあるときだけ。あとで追加したときも入ります）。
+          </div>
+          <label class="check" style="display: flex; gap: 6px; align-items: center; margin-top: 6px"
+            ><input type="checkbox" id="kenyoChain" />兼用の連鎖をたどる（試験中：004↔005 と 005↔006 があれば 004 に 006 も足す）</label
+          >
         </div>
         <div class="settingsSection">
           <h3>撮入れ素材の名前</h3>
@@ -2491,9 +3007,9 @@
     <script>
       const KEY = "retake.v7",
         KEY2 = "retake.v8",
-        SCHEMA = 9,
-        JSON_SCHEMA = 4;
-      const APP_VERSION = "1.24.2";
+        SCHEMA = 10,
+        JSON_SCHEMA = 5;
+      const APP_VERSION = "2.0.0";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -2695,6 +3211,17 @@
           matR: cleanMatR(from && from.matR),
           takeType: cleanTakeType(from && from.takeType),
           takeNo: cleanTakeNo(from && from.takeNo),
+          ...extraOf(from),
+        };
+      }
+      // 一覧入力（v2.0.0〜）で使う、版ごとの作業記入欄。カード（PNG）には出さない
+      const CHECKS = ["", "✓", "保留", "NG"];
+      function extraOf(from) {
+        const f = from || {};
+        return {
+          assignee: typeof f.assignee === "string" ? f.assignee.slice(0, 40) : "",
+          returnDate: /^\d{4}-\d{2}-\d{2}$/.test(f.returnDate || "") ? f.returnDate : "",
+          check: CHECKS.includes(f.check) ? f.check : "",
         };
       }
       function emptyVer(r, from) {
@@ -3291,6 +3818,7 @@
               matR: cleanMatR(v.matR),
               takeType: cleanTakeType(v.takeType),
               takeNo: cleanTakeNo(v.takeNo),
+              ...extraOf(v),
               images: [...(v.images || [])],
             })),
           })),
@@ -3662,6 +4190,11 @@
         if (p.paper && PAPER_SIZES[p.paper]) prefs.paper = p.paper;
         prefs.inputOnly = !!p.inputOnly;
         applyInputOnly();
+        // 一覧入力（v2.0.0〜）: 表示（カード／一覧）・一覧の形（A=表を全面／B=入力欄つき）・兼用の連鎖（試験中）
+        prefs.view = p.view === "grid" ? "grid" : "card";
+        prefs.gridLayout = p.gridLayout === "B" ? "B" : "A";
+        prefs.kenyoChain = !!p.kenyoChain;
+        if (typeof applyView === "function") applyView();
         if (Array.isArray(p.matLabels)) prefs.matLabels = cleanMatLabels(p.matLabels);
         if (p.takeCodes && typeof p.takeCodes === "object") {
           const tc = {};
@@ -3879,6 +4412,11 @@
           msg: () =>
             `話数が増えても保存容量が足りなくなりにくい形式へ更新しました（${cuts.length}カット・${episodes.length}話数）。開いていない話数はブラウザ内の大きな保存領域（IndexedDB）に置きます。`,
         },
+        v9: {
+          bak: ".s9",
+          msg: () =>
+            `一覧入力モードと表の読み込み・書き出し（v2.0.0）に対応する形式へ更新しました（${cuts.length}カット）。版ごとに担当・戻し日・確認の欄が増えました（空欄のまま）。`,
+        },
       };
       // 退避データを書く。既にあれば上書きしない
       async function saveBackup(name, raw) {
@@ -3988,8 +4526,8 @@
               (bakOk
                 ? `更新前のデータは ${KEY2}${mig.bak} として退避しています。`
                 : "更新前のデータの退避は空き容量が足りずできませんでした。念のため「JSON保存」でバックアップしてください。") +
-              (mode !== "v8"
-                ? " あわせて、その後の版で増えた項目（作品・話数の切り替え・撮影テイクなど）にも対応する最新の形式にしました。"
+              (mode !== "v9"
+                ? " あわせて、その後の版で増えた項目（作品・話数の切り替え・撮影テイク・一覧入力など）にも対応する最新の形式にしました。"
                 : "");
         showBanner(
           v
@@ -4678,6 +5216,7 @@
       function renderAll() {
         renderList();
         renderPreview();
+        if (isGridView()) renderGrid();
       }
       function renderThumbs() {
         let box = $("thumbs"),
@@ -5529,9 +6068,19 @@
         selected = cuts.length - 1;
         loadToForm();
         renderAll();
-        $("cut").focus();
+        focusNewCut();
         schedule();
       };
+      // 追加・複製したカットの番号の欄へ（一覧入力なら表のその行のカット番号へ）
+      function focusNewCut() {
+        if (isGridView()) {
+          gridAct = { c: cuts[selected], v: verOf(cuts[selected]), key: "cut" };
+          gridSelMark = cuts[selected];
+          renderGrid();
+          scrollActIntoView();
+          focusGrid();
+        } else $("cut").focus();
+      }
       $("dup").onclick = () => {
         const src = cuts[selected];
         cuts.splice(selected + 1, 0, {
@@ -5553,13 +6102,14 @@
             matR: cleanMatR(v.matR),
             takeType: cleanTakeType(v.takeType),
             takeNo: cleanTakeNo(v.takeNo),
+            ...extraOf(v),
             images: [...(v.images || [])],
           })),
         });
         selected++;
         loadToForm();
         renderAll();
-        $("cut").focus();
+        focusNewCut();
         schedule();
       };
       $("del").onclick = () => {
@@ -5803,6 +6353,7 @@
                   matR: cleanMatR(v.matR),
                   takeType: cleanTakeType(v.takeType),
                   takeNo: cleanTakeNo(v.takeNo),
+                  ...extraOf(v),
                   images: (v.images || []).map(imgSrc).filter(Boolean),
                 })),
               })),
@@ -6011,6 +6562,7 @@
           matLabels: [...DEFAULT_MAT_LABELS],
         };
         applyInputOnly();
+        applyView();
         updatePaperHint();
         syncShortcutTitles();
         selected = 0;
@@ -6247,6 +6799,7 @@
         renderStoreInfo();
       };
       $("settingsBtn").onclick = () => {
+        $("kenyoChain").checked = !!prefs.kenyoChain;
         renderStoreInfo();
         fillMatLabelInputs();
         fillTakeCodeInputs();
@@ -6403,11 +6956,12 @@
           return;
         }
         // 環境設定・ヘルプを開いている間はショートカットを効かせない（裏でカットが増えないように）。Escで閉じる
-        const modal = document.querySelector("#settingsModal.show, #helpModal.show");
+        const modal = document.querySelector("#settingsModal.show, #helpModal.show, #importModal.show, #pasteModal.show");
         if (modal) {
           if (e.key === "Escape" && !e.isComposing && e.keyCode !== 229) {
             e.preventDefault();
             if (modal.id === "settingsModal") stopShortcutListen();
+            if (modal.id === "importModal") importPlan = null;
             modal.classList.remove("show");
           }
           return;
@@ -6456,7 +7010,7 @@
         document.title = APP_NAME + " v" + APP_VERSION + " - リテイク指示カード";
         $("helpTitle").textContent = APP_NAME + " バージョン " + APP_VERSION;
         $("helpBody").textContent =
-          `【${APP_NAME}】 バージョン ${APP_VERSION}\n\n■ 用途\nアニメ制作のリテイク指示カードを作成し、印刷・共有用PNGとして書き出します。\n\n■ 免責事項\n・本ソフトウェアは現状のまま提供され、動作や結果について一切の保証をしません。\n・本ソフトウェアの使用、または使用できなかったことによって生じた損害\n　（データの消失・破損、業務上の損失などを含みます）について、開発者は責任を負いません。\n・重要なデータを編集する前に、必ずバックアップ（JSON保存）を取ってください。\n・予告なく機能や仕様の変更、開発の終了を行う場合があります。\n\n■ 使用しているソフトウェア\n・ブラウザ標準 Web API（Canvas / FileReader / localStorage など）\n・追加の外部ライブラリはありません\n・ライセンス：MIT License\n\n■ ショートカット\n${SHORTCUT_ACTIONS.map((a) => "・" + formatShortcut(prefs.shortcuts[a.id]) + " … " + a.label).join("\n")}\n\n■ 版（R回数）\nカットごとに過去の版を残せます。「新しい版を作る」で次のRが空で追加されます。Rの数字を直しても新しい版は増えません。\n全PNG・テキスト・TSVは各カットの最新版（Rが一番大きい版）を出します。画面のPNGは表示中の版です。\n\n■ 修正内容\nリテイク内容とは別の欄です。版ごとに保存し、文字色（黒・赤・青）も版ごとに選べます。空でもカードに欄を出します。\n参考画像は1枚目だけを修正内容の下に出し、2枚目以降は別ページ（1ページ4枚・左上から）です。\n優先度はカード見出しの左端に出します。\n各版に「作業済み」を付けられます。入力欄のチェックは今見ている版、一覧のチェックは最新の版です。印刷用のカードには出しません。\n「入力だけ見る」でプレビューを隠せます。\n\n■ 画面の配置\n上部バーに作品コード・話数・初期R、保存状態、PNG書き出し・全PNG・「出力・保存」メニュー（テキスト・TSV・JSON・状況をコピー・全リセット）、環境設定、ヘルプがあります。\n左はカット一覧、中央は入力欄、右はプレビューです。画面が狭いとき（約1180px以下）は、カット名の横の「入力」「プレビュー」で表示を切り替えます。\nプレビューの大きさは「全体」（カード全体が画面に収まる。最大100%）／「幅」（欄の幅に合わせる）／「100%」で切り替えます。列の境目をドラッグすると一覧・プレビューの幅を変えられ、ダブルクリックで自動に戻ります。\nプレビューをクリックするか「拡大」で画面いっぱいに表示します（もう一度クリックかEscで戻る）。拡大中も前／次のカットのショートカットが使えます。\n\n■ カット一覧のキー操作\n一覧をクリックしたあと、↑↓で選択、Home／Endで先頭／末尾、Enterでリテイク内容の入力欄へ、Spaceで最新の版の済／未を切り替えます。入力欄でEscを押すと一覧へ戻ります（日本語の変換中は除く）。\n一覧の上の「すべて／未了／済」の札で、最新の版の状態で絞り込めます（「未了」が以前の「作業済みを隠す」）。\n\n■ 撮影テイク\n版の欄の「撮影」で、本撮（v）・T撮（t）・線撮（s）のどれかを選び（もう一度押すと外す）、種類ごとにテイク番号を入れます。カードではリテイク欄の右に3段で出し、選んだ種類を赤丸で囲み、番号は v-01 のように2桁で出します。番号が空でも v- までは出すので手書きできます。テキスト出力にも出します。\n記号（v / t / s）は撮影会社の表記に合わせて、環境設定の「撮影テイクの記号」で変えられます。\n\n■ 撮入れ素材\n版ごとに、撮影に入れる素材（セル・BG・CG・2D・撮R）にチェックを付けられます。カードでは修正内容欄の右端に「撮入れ」の縦枠を出し、6枠すべてを□付きで並べます。チェックした素材だけ□に赤い印が付きます。6枠目は初期では名前のない□だけの枠で、印刷後の手書きに使えます。右隣の「R」列は素材ごとのR回数の欄です。入力欄で素材名の横にR回数を入れるとカードに出ます。空欄なら手書き用に空けておきます。\n枠の名前は環境設定の「撮入れ素材の名前」で変えられます（2文字がおすすめ）。名前を変えても付けたチェックは残ります。テキスト出力にも出します（表用TSVには出しません）。\n入力欄を触っている間は、プレビューの対応する欄が青く光ります（画面表示だけで、書き出しには出ません）。\n\n■ 作品・話数の切り替え\n上部の「話数 ▾」から、保存済みの作品・話数を切り替えます。「＋ 新しい話数を作る」は同じ作品コードで次の話数を作ります（工程名は引き継ぎ、日付は空）。カット・工程の日付・選択位置は話数ごと、用紙・ショートカット・撮入れ素材名・列幅は全話数で共通です。\n全PNG・テキスト・TSV・JSON保存は、開いている話数だけを出します。JSON読込は、同じ作品・話数が保存済みならそこを置き換え（確認あり）、無ければ新しい話数として追加します。\n\n■ 版の操作\n「新しい版を作る」は最大Rの次を空で追加します。Rの数字を直しても新しい版は増えません。同じカットに同じRは持てません。最後の1版は削除できません。カットの削除は全版を消します。\n\n■ 参考画像\n1枚目だけを修正内容の下に出します。2枚目以降は別ページ（1ページ最大4枚、左上から）です。追加はD&DまたはCtrl+V。サムネイルの→で他のカットへ移動・コピー、◀▶で順序変更、✕で外します（画像のクリックでは消えません）。\n「状況をコピー」は、版番号・カット数・画像の枚数・保存状態だけをコピーします。本文と画像そのものは含みません。\n\n■ アプリとしてインストール\nGitHub Pages 版を Chrome / Edge で開くと、上部に「⤓ インストール」が出ます（アドレスバー右のインストールのアイコンでも可）。押すと独立したウィンドウのアプリになり、スタートメニュー・Dock から起動でき、オフラインでも使えます。Mac の Safari は「ファイル」→「Dockに追加」です。\nインストールしたアプリのデータは、そのブラウザで開いた GitHub Pages 版と同じです。index.html をファイルとして開いた場合とは別のデータになります。\n\n■ データの保存場所\nテキスト・設定・開いている話数は localStorage キー：${KEY2}\n画像と、開いていない話数の中身は IndexedDB（ブラウザ内・大容量）に保存\n旧形式のデータ（${KEY}）は移行後もバックアップとして残しています\n（サイトごと。GitHub Pages とローカルファイルでは別データになります）\n\n■ サポート・公式情報\nFANBOX：https://akira0w0.fanbox.cc/\nX（旧Twitter）：https://x.com/Akira_0m0_\nGitHub：https://github.com/akira-t5/AniRetake\n変更履歴：https://github.com/akira-t5/AniRetake/blob/main/CHANGELOG.md\n\n(c) 2026 アキラ`;
+          `【${APP_NAME}】 バージョン ${APP_VERSION}\n\n■ 用途\nアニメ制作のリテイク指示カードを作成し、印刷・共有用PNGとして書き出します。\n\n■ 免責事項\n・本ソフトウェアは現状のまま提供され、動作や結果について一切の保証をしません。\n・本ソフトウェアの使用、または使用できなかったことによって生じた損害\n　（データの消失・破損、業務上の損失などを含みます）について、開発者は責任を負いません。\n・重要なデータを編集する前に、必ずバックアップ（JSON保存）を取ってください。\n・予告なく機能や仕様の変更、開発の終了を行う場合があります。\n\n■ 使用しているソフトウェア\n・ブラウザ標準 Web API（Canvas / FileReader / localStorage など）\n・追加の外部ライブラリはありません\n・ライセンス：MIT License\n\n■ ショートカット\n${SHORTCUT_ACTIONS.map((a) => "・" + formatShortcut(prefs.shortcuts[a.id]) + " … " + a.label).join("\n")}\n\n■ 版（R回数）\nカットごとに過去の版を残せます。「新しい版を作る」で次のRが空で追加されます。Rの数字を直しても新しい版は増えません。\n全PNG・テキスト・TSVは各カットの最新版（Rが一番大きい版）を出します。画面のPNGは表示中の版です。\n\n■ 修正内容\nリテイク内容とは別の欄です。版ごとに保存し、文字色（黒・赤・青）も版ごとに選べます。空でもカードに欄を出します。\n参考画像は1枚目だけを修正内容の下に出し、2枚目以降は別ページ（1ページ4枚・左上から）です。\n優先度はカード見出しの左端に出します。\n各版に「作業済み」を付けられます。入力欄のチェックは今見ている版、一覧のチェックは最新の版です。印刷用のカードには出しません。\n「入力だけ見る」でプレビューを隠せます。\n\n■ 画面の配置\n上部バーに作品コード・話数・初期R、保存状態、PNG書き出し・全PNG・「出力・保存」メニュー（テキスト・TSV・JSON・状況をコピー・全リセット）、環境設定、ヘルプがあります。\n左はカット一覧、中央は入力欄、右はプレビューです。画面が狭いとき（約1180px以下）は、カット名の横の「入力」「プレビュー」で表示を切り替えます。\nプレビューの大きさは「全体」（カード全体が画面に収まる。最大100%）／「幅」（欄の幅に合わせる）／「100%」で切り替えます。列の境目をドラッグすると一覧・プレビューの幅を変えられ、ダブルクリックで自動に戻ります。\nプレビューをクリックするか「拡大」で画面いっぱいに表示します（もう一度クリックかEscで戻る）。拡大中も前／次のカットのショートカットが使えます。\n\n■ カット一覧のキー操作\n一覧をクリックしたあと、↑↓で選択、Home／Endで先頭／末尾、Enterでリテイク内容の入力欄へ、Spaceで最新の版の済／未を切り替えます。入力欄でEscを押すと一覧へ戻ります（日本語の変換中は除く）。\n一覧の上の「すべて／未了／済」の札で、最新の版の状態で絞り込めます（「未了」が以前の「作業済みを隠す」）。\n\n■ 撮影テイク\n版の欄の「撮影」で、本撮（v）・T撮（t）・線撮（s）のどれかを選び（もう一度押すと外す）、種類ごとにテイク番号を入れます。カードではリテイク欄の右に3段で出し、選んだ種類を赤丸で囲み、番号は v-01 のように2桁で出します。番号が空でも v- までは出すので手書きできます。テキスト出力にも出します。\n記号（v / t / s）は撮影会社の表記に合わせて、環境設定の「撮影テイクの記号」で変えられます。\n\n■ 撮入れ素材\n版ごとに、撮影に入れる素材（セル・BG・CG・2D・撮R）にチェックを付けられます。カードでは修正内容欄の右端に「撮入れ」の縦枠を出し、6枠すべてを□付きで並べます。チェックした素材だけ□に赤い印が付きます。6枠目は初期では名前のない□だけの枠で、印刷後の手書きに使えます。右隣の「R」列は素材ごとのR回数の欄です。入力欄で素材名の横にR回数を入れるとカードに出ます。空欄なら手書き用に空けておきます。\n枠の名前は環境設定の「撮入れ素材の名前」で変えられます（2文字がおすすめ）。名前を変えても付けたチェックは残ります。テキスト出力にも出します（表用TSVには出しません）。\n入力欄を触っている間は、プレビューの対応する欄が青く光ります（画面表示だけで、書き出しには出ません）。\n\n■ 作品・話数の切り替え\n上部の「話数 ▾」から、保存済みの作品・話数を切り替えます。「＋ 新しい話数を作る」は同じ作品コードで次の話数を作ります（工程名は引き継ぎ、日付は空）。カット・工程の日付・選択位置は話数ごと、用紙・ショートカット・撮入れ素材名・列幅は全話数で共通です。\n全PNG・テキスト・TSV・JSON保存は、開いている話数だけを出します。JSON読込は、同じ作品・話数が保存済みならそこを置き換え（確認あり）、無ければ新しい話数として追加します。\n\n■ 一覧入力（オールラッシュ向け）\n上部の「カード／一覧入力」で切り替えます。一覧入力では、全カットを1行ずつの表で見ながら続けて入力できます。「表を全面」は全項目、「入力欄つき」は左に入力欄を残して主な項目だけを出します（画面が狭いときは表を全面だけ）。\nセルを選んでそのまま打つと入力（日本語入力もそのまま）。Enter で確定して下へ、Tab で右へ、Shift+Enter でセル内の改行、Esc で取り消し。Enter や F2 で今の内容を直せます。済は Space かクリックで切り替え。\n一番下の行に入力すると新しいカットになります（カット番号を入れなければ前の行の次の番号）。すでにあるカット番号を入れると、そのカットの新しい版（次のR）になります。\nスプレッドシートの範囲をコピーして貼り付けると、複数行・複数列をまとめて入れます（入力済みのセルを置き換えるときは確認があります）。No をダブルクリックすると、そのカットをカードで開きます。\n担当・戻し日・確認は版ごとの作業記入欄です（カードには出しません）。\n\n■ 表（スプレッドシート）の書き出しと読み込み\n「出力・保存」または一覧入力の「表を書き出し」で、xlsx を書き出します。一覧型（カードの項目を列に）、作業チェック型（撮入れを素材ごとの●の列に分け、担当・戻し日・確認の記入欄つき）、読み込み用テンプレート（プルダウンと使い方つき）の3つです。Excel・Google スプレッドシートで開けます。\n「表を読み込む」では、xlsx・CSV のファイルか、範囲をコピーして貼り付けた表を読みます。列は見出しの文字で判断するので、順番の入れ替えや不要な列の削除をしても読めます。必須はカットの列だけです。\n取り込む前に、新規・版を追加・更新・変化なし・エラーの一覧を出します。確認して「取り込む」を押すまで何も変わりません。同じカット・同じRなら更新、Rが違えば新しい版を追加します。空欄のセルは、入っている内容を消しません。画像は表では扱いません。\n\n■ 兼用カット\n兼用を書くと、兼用先のカットの兼用欄にもカット番号が入ります（写すのは番号だけ）。兼用先のカットがまだ無いときは何もせず、あとでそのカットを追加したときに入ります。兼用を消したときは、相手からも消すか確認します。カードは両方のカットに出ます（004-005 と 005-004）。\n環境設定の「兼用の連鎖をたどる」（試験中）をオンにすると、つながっている兼用カットを全部そろえます。\n\n■ 版の操作\n「新しい版を作る」は最大Rの次を空で追加します。Rの数字を直しても新しい版は増えません。同じカットに同じRは持てません。最後の1版は削除できません。カットの削除は全版を消します。\n\n■ 参考画像\n1枚目だけを修正内容の下に出します。2枚目以降は別ページ（1ページ最大4枚、左上から）です。追加はD&DまたはCtrl+V。サムネイルの→で他のカットへ移動・コピー、◀▶で順序変更、✕で外します（画像のクリックでは消えません）。\n「状況をコピー」は、版番号・カット数・画像の枚数・保存状態だけをコピーします。本文と画像そのものは含みません。\n\n■ アプリとしてインストール\nGitHub Pages 版を Chrome / Edge で開くと、上部に「⤓ インストール」が出ます（アドレスバー右のインストールのアイコンでも可）。押すと独立したウィンドウのアプリになり、スタートメニュー・Dock から起動でき、オフラインでも使えます。Mac の Safari は「ファイル」→「Dockに追加」です。\nインストールしたアプリのデータは、そのブラウザで開いた GitHub Pages 版と同じです。index.html をファイルとして開いた場合とは別のデータになります。\n\n■ データの保存場所\nテキスト・設定・開いている話数は localStorage キー：${KEY2}\n画像と、開いていない話数の中身は IndexedDB（ブラウザ内・大容量）に保存\n旧形式のデータ（${KEY}）は移行後もバックアップとして残しています\n（サイトごと。GitHub Pages とローカルファイルでは別データになります）\n\n■ サポート・公式情報\nFANBOX：https://akira0w0.fanbox.cc/\nX（旧Twitter）：https://x.com/Akira_0m0_\n\n(c) 2026 アキラ`;
       }
       $("helpBtn").onclick = () => {
         fillHelp();
@@ -6714,6 +7268,31 @@
         const f = b.dataset.f;
         setDoneFilter(doneFilter === f && f !== "all" ? "all" : f);
       });
+      $("kenyoChain").onchange = () => {
+        prefs.kenyoChain = $("kenyoChain").checked;
+        schedule();
+      };
+      // 兼用カット番号の自動記入（カード側の入力欄）。確定したとき（欄を離れたとき）に、兼用先の兼用欄をそろえる
+      let subcutBefore = "";
+      $("subcut").addEventListener("focus", () => (subcutBefore = cuts[selected].subcut || ""));
+      $("subcut").addEventListener("change", () => {
+        const c = cuts[selected];
+        formToData();
+        if ((c.subcut || "") !== subcutBefore && kenyoOnSubcut(c, subcutBefore, cuts)) {
+          renderAll();
+          schedule();
+        }
+        subcutBefore = c.subcut || "";
+      });
+      $("cut").addEventListener("change", () => {
+        const c = cuts[selected];
+        formToData();
+        if (kenyoOnCutNumber(c, cuts)) {
+          $("subcut").value = c.subcut;
+          renderAll();
+          schedule();
+        }
+      });
       $("togglePreview").onclick = () => {
         prefs.inputOnly = !prefs.inputOnly;
         applyInputOnly();
@@ -6785,6 +7364,1722 @@
       loadToForm();
       renderAll();
       fillHelp();
+      // ===================== v2.0.0 一覧入力モード・表の読み込み／書き出し =====================
+      // ---------- 兼用カット番号の自動記入（写すのは兼用番号だけ。兼用先のカットが無ければ何もしない） ----------
+      function kenyoList(s) {
+        return String(s || "")
+          .split(/[-_]/)
+          .map((x) => x.trim())
+          .filter(Boolean);
+      }
+      // 兼用欄に番号を足す（すでにある番号・自分の番号は足さない。既存の文字はそのまま残す）
+      function kenyoAdd(c, nums) {
+        const cur = kenyoList(c.subcut),
+          add = [];
+        nums.forEach((n) => {
+          if (n && n !== c.cut && !cur.includes(n) && !add.includes(n)) add.push(n);
+        });
+        if (!add.length) return 0;
+        c.subcut = (c.subcut ? c.subcut + "_" : "") + add.join("_");
+        return add.length;
+      }
+      function kenyoRemove(c, n) {
+        const parts = String(c.subcut || "").split(/([-_])/),
+          toks = [];
+        for (let i = 0; i < parts.length; i += 2) toks.push({ t: parts[i], sep: i ? parts[i - 1] : "" });
+        const keep = toks.filter((x) => x.t !== n);
+        if (keep.length === toks.length) return false;
+        c.subcut = keep.map((x, i) => (i ? x.sep || "_" : "") + x.t).join("");
+        return true;
+      }
+      // 連鎖（環境設定で切り替え・試験中）: つながっている兼用カットを全部そろえる（足すだけ）
+      function kenyoChainFill(list, start) {
+        if (!start.cut) return 0;
+        const seen = new Set([start.cut]),
+          queue = [start.cut];
+        while (queue.length) {
+          const n = queue.shift(),
+            near = new Set();
+          list.forEach((c) => {
+            if (!c.cut) return;
+            const l = kenyoList(c.subcut);
+            if (c.cut === n) l.forEach((t) => near.add(t));
+            if (l.includes(n)) near.add(c.cut);
+          });
+          near.forEach((t) => {
+            if (!seen.has(t)) {
+              seen.add(t);
+              queue.push(t);
+            }
+          });
+        }
+        let k = 0;
+        list.forEach((c) => {
+          if (c.cut && seen.has(c.cut)) k += kenyoAdd(c, [...seen]);
+        });
+        return k;
+      }
+      // 兼用欄を変えたとき: 1回で書いたカット同士の兼用欄をそろえる。消した番号は相手から消すか確認する
+      function kenyoOnSubcut(c, oldStr, list, opts) {
+        opts = opts || {};
+        if (!c.cut) return 0;
+        const now = kenyoList(c.subcut).filter((n) => n !== c.cut),
+          old = kenyoList(oldStr).filter((n) => n !== c.cut);
+        let k = 0;
+        // そろえるのは、今回書き足した番号同士とこのカットだけ（前からある番号には広げない＝連鎖しない）
+        const added = now.filter((x) => !old.includes(x));
+        added.forEach((t) => {
+          const partners = [c.cut, ...added.filter((x) => x !== t)];
+          list.forEach((x) => {
+            if (x !== c && x.cut === t) k += kenyoAdd(x, partners);
+          });
+        });
+        const removed = old.filter((x) => !now.includes(x));
+        if (removed.length && !opts.noRemove) {
+          const targets = list.filter(
+            (x) => x !== c && removed.includes(x.cut) && kenyoList(x.subcut).includes(c.cut),
+          );
+          if (
+            targets.length &&
+            confirm(
+              `${[...new Set(targets.map((x) => x.cut))].join("・")} の兼用欄からも ${c.cut} を消しますか？`,
+            )
+          )
+            targets.forEach((x) => {
+              if (kenyoRemove(x, c.cut)) k++;
+            });
+        }
+        if (prefs.kenyoChain) k += kenyoChainFill(list, c);
+        return k;
+      }
+      // カットを追加した・カット番号を決めたとき: このカットを兼用に書いているカットの番号を入れる
+      function kenyoOnCutNumber(c, list) {
+        if (!c.cut) return 0;
+        const partners = [];
+        list.forEach((y) => {
+          if (y === c || !y.cut) return;
+          const l = kenyoList(y.subcut);
+          if (l.includes(c.cut)) partners.push(y.cut, ...l.filter((t) => t !== c.cut));
+        });
+        let k = partners.length ? kenyoAdd(c, partners) : 0;
+        k += kenyoOnSubcut(c, "", list, { noRemove: true });
+        return k;
+      }
+
+      // ---------- 表の値の読み取り（一覧の入力・読み込みで共通） ----------
+      const nfkc = (v) => String(v == null ? "" : v).normalize("NFKC");
+      function ymdOf(y, mo, d) {
+        if (!(mo >= 1 && mo <= 12 && d >= 1 && d <= 31 && y > 1900 && y < 2200)) return null;
+        return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      }
+      // 日付: 2026/10/09・2026-10-09・10/9・10月9日・20261009・表計算の日付の数値。空なら ""、読めなければ null
+      function parseDateCell(x) {
+        if (x == null) return "";
+        if (typeof x === "number") {
+          if (x > 20000 && x < 90000) return new Date(Math.round((x - 25569) * 86400000)).toISOString().slice(0, 10);
+          return null;
+        }
+        const s = nfkc(x).trim();
+        if (!s) return "";
+        let m = /^(\d{4})[\/\-.年](\d{1,2})[\/\-.月](\d{1,2})日?(\s.*)?$/.exec(s);
+        if (m) return ymdOf(+m[1], +m[2], +m[3]);
+        m = /^(\d{1,2})[\/\-.月](\d{1,2})日?$/.exec(s);
+        if (m) return ymdOf(new Date().getFullYear(), +m[1], +m[2]);
+        m = /^(\d{4})(\d{2})(\d{2})$/.exec(s);
+        if (m) return ymdOf(+m[1], +m[2], +m[3]);
+        if (/^\d{5}(\.\d+)?$/.test(s)) return parseDateCell(+s);
+        return null;
+      }
+      const fmtYmd = (v) => (v ? v.replace(/-/g, "/") : "");
+      // 済などの印: true / false / 空なら null / 読めなければ undefined
+      function parseFlag(x) {
+        const s = nfkc(x).trim().toUpperCase();
+        if (!s) return null;
+        if (["✓", "✔", "○", "◯", "●", "済", "TRUE", "1", "YES", "Y", "OK", "☑"].includes(s)) return true;
+        if (["FALSE", "0", "未", "×", "NO", "N", "-", "☐"].includes(s)) return false;
+        return undefined;
+      }
+      function matIndexByName(name) {
+        const n = nfkc(name).trim().toUpperCase();
+        if (!n) return -1;
+        for (let i = 0; i < MAT_SLOTS; i++) {
+          const l = nfkc(matLabel(i)).trim().toUpperCase();
+          if (l && l === n) return i;
+        }
+        const m = /^枠(\d)$/.exec(n);
+        if (m && +m[1] >= 1 && +m[1] <= MAT_SLOTS) return +m[1] - 1;
+        return -1;
+      }
+      // 撮入れ: 「セル・BG(R2)」の形。読めない名前は bad に入れる
+      function parseMats(str) {
+        const mats = [],
+          matR = ["", "", "", "", "", ""],
+          bad = [];
+        nfkc(str)
+          .split(/[・、,\s\/]+/)
+          .filter(Boolean)
+          .forEach((tok) => {
+            const m = /^(.*?)(?:\(R?(\d{1,2})\))?$/.exec(tok),
+              i = matIndexByName(m[1]);
+            if (i < 0) return bad.push(tok);
+            if (!mats.includes(i)) mats.push(i);
+            if (m[2]) matR[i] = m[2];
+          });
+        return { mats: cleanMats(mats), matR, bad };
+      }
+      // 撮影: 「v-01」「本撮」「本撮 v-01」「t2」など。空なら null、読めなければ undefined
+      function parseTake(str) {
+        const s = nfkc(str).trim();
+        if (!s) return null;
+        const cands = [];
+        TAKE_TYPES.forEach((t) =>
+          [t.label, takeSym(t.code), t.code].forEach((w) => cands.push({ w: nfkc(w).toUpperCase(), code: t.code })),
+        );
+        cands.sort((a, b) => b.w.length - a.w.length);
+        const up = s.toUpperCase(),
+          hit = cands.find((x) => x.w && up.startsWith(x.w));
+        if (!hit) return undefined;
+        const d = (/(\d{1,3})\s*$/.exec(s) || [])[1] || "";
+        return { type: hit.code, no: d };
+      }
+      const takeCellText = (v) => {
+        const t = cleanTakeType(v.takeType);
+        return t ? takeCodeText(t, cleanTakeNo(v.takeNo)[t]) : "";
+      };
+
+      // ---------- 列の定義（見出しの文字で、一覧・表の書き出し・読み込みをつなぐ） ----------
+      // set(c, v, 値) は "same"（変化なし）／"changed"／エラーの文を返す。空欄の扱いは呼ぶ側が決める
+      const setStr = (obj, key, val) => {
+        if ((obj[key] || "") === val) return "same";
+        obj[key] = val;
+        return "changed";
+      };
+      const TCOLS = {
+        no: { label: "No", w: 40, xw: 5, kind: "ro" },
+        cut: { label: "カット", alias: ["カット番号", "CUT", "C"], w: 70, xw: 8, kind: "text", get: (c) => c.cut },
+        subcut: {
+          label: "兼用",
+          alias: ["兼用カット", "兼用カット番号"],
+          w: 70,
+          xw: 9,
+          kind: "text",
+          get: (c) => c.subcut,
+          set: (c, v, x) => setStr(c, "subcut", cleanCut(x)),
+        },
+        r: {
+          label: "R",
+          alias: ["リテイク回数", "版", "R回数"],
+          w: 52,
+          xw: 6,
+          kind: "text",
+          get: (c, v) => rrLabel(v.r),
+          edit: (c, v) => String(v.r),
+          set: (c, v, x) => {
+            const n = parseR(x);
+            if ((v.r | 0) === n) return "same";
+            return setVerR(c, v, n) ? "changed" : `${c.cut || "このカット"}には ${rrLabel(n)} の版がすでにあります`;
+          },
+        },
+        priority: {
+          label: "優先",
+          alias: ["優先度"],
+          w: 86,
+          xw: 10,
+          kind: "choice",
+          options: PRIORITIES,
+          get: (c) => c.priority || "",
+          set: (c, v, x) => {
+            const p = nfkc(x).trim();
+            const hit = PRIORITIES.find((o) => nfkc(o).toUpperCase() === p.toUpperCase());
+            if (hit === undefined) return `優先は「${PRIORITIES.filter(Boolean).join("／")}」か空欄です`;
+            return setStr(c, "priority", hit);
+          },
+        },
+        retakeDate: {
+          label: "リテイク日",
+          w: 92,
+          xw: 11,
+          kind: "text",
+          get: (c, v) => fmtYmd(v.retakeDate),
+          set: (c, v, x) => {
+            const d = parseDateCell(x);
+            if (d === null) return "リテイク日を日付として読めません";
+            return setStr(v, "retakeDate", d);
+          },
+        },
+        body: {
+          label: "リテイク内容",
+          alias: ["内容", "リテイク"],
+          w: 0,
+          xw: 38,
+          kind: "multi",
+          get: (c, v) => v.body || "",
+          set: (c, v, x) => setStr(v, "body", String(x).replace(/\r\n?/g, "\n")),
+        },
+        instr: {
+          label: "修正内容",
+          alias: ["修正指示"],
+          w: 170,
+          xw: 24,
+          kind: "multi",
+          get: (c, v) => v.instr || "",
+          set: (c, v, x) => setStr(v, "instr", String(x).replace(/\r\n?/g, "\n")),
+        },
+        instrColor: {
+          label: "文字色",
+          w: 50,
+          xw: 7,
+          kind: "choice",
+          options: ["黒", "赤", "青"],
+          get: (c, v) => ({ black: "黒", red: "赤", blue: "青" })[v.instrColor] || "黒",
+          set: (c, v, x) => {
+            const k = { 黒: "black", 赤: "red", 青: "blue", BLACK: "black", RED: "red", BLUE: "blue" }[nfkc(x).trim().toUpperCase()];
+            if (!k) return "文字色は「黒／赤／青」です";
+            return setStr(v, "instrColor", k);
+          },
+        },
+        mats: {
+          label: "撮入れ",
+          alias: ["撮入れ素材"],
+          w: 100,
+          xw: 12,
+          kind: "text",
+          get: (c, v) => matsText(v),
+          set: (c, v, x) => {
+            const p = parseMats(x);
+            if (p.bad.length) return `撮入れの「${p.bad.join("・")}」は素材名にありません（環境設定の素材名と合わせてください）`;
+            const before = JSON.stringify([cleanMats(v.mats), cleanMatR(v.matR)]);
+            v.mats = p.mats;
+            v.matR = p.matR;
+            return JSON.stringify([v.mats, v.matR]) === before ? "same" : "changed";
+          },
+        },
+        take: {
+          label: "撮影",
+          alias: ["撮影テイク"],
+          w: 64,
+          xw: 8,
+          kind: "text",
+          get: (c, v) => takeCellText(v),
+          set: (c, v, x) => {
+            const t = parseTake(x);
+            if (t === undefined) return "撮影は「本撮／T撮／線撮」か「v-01」の形で入れます";
+            const before = takeCellText(v);
+            if (!t) v.takeType = "";
+            else {
+              v.takeType = t.type;
+              if (t.no) {
+                const o = cleanTakeNo(v.takeNo);
+                o[t.type] = cleanTakeNo({ [t.type]: t.no })[t.type];
+                v.takeNo = o;
+              }
+            }
+            return takeCellText(v) === before ? "same" : "changed";
+          },
+        },
+        takeNo: {
+          label: "テイク",
+          alias: ["テイク番号"],
+          w: 50,
+          xw: 6,
+          kind: "text",
+          get: (c, v) => {
+            const t = cleanTakeType(v.takeType);
+            return t ? cleanTakeNo(v.takeNo)[t] : "";
+          },
+          set: (c, v, x) => {
+            const t = cleanTakeType(v.takeType);
+            if (!t) return "テイク番号は、撮影の種類（本撮／T撮／線撮）と一緒に入れます";
+            const o = cleanTakeNo(v.takeNo),
+              n = cleanTakeNo({ [t]: nfkc(x) })[t];
+            if (o[t] === n) return "same";
+            o[t] = n;
+            v.takeNo = o;
+            return "changed";
+          },
+        },
+        assignee: {
+          label: "担当",
+          alias: ["担当者"],
+          w: 70,
+          xw: 10,
+          kind: "text",
+          get: (c, v) => v.assignee || "",
+          set: (c, v, x) => setStr(v, "assignee", nfkc(x).trim().slice(0, 40)),
+        },
+        returnDate: {
+          label: "戻し日",
+          w: 92,
+          xw: 10,
+          kind: "text",
+          get: (c, v) => fmtYmd(v.returnDate),
+          set: (c, v, x) => {
+            const d = parseDateCell(x);
+            if (d === null) return "戻し日を日付として読めません";
+            return setStr(v, "returnDate", d);
+          },
+        },
+        check: {
+          label: "確認",
+          w: 56,
+          xw: 7,
+          kind: "choice",
+          options: CHECKS,
+          get: (c, v) => v.check || "",
+          set: (c, v, x) => {
+            let s = nfkc(x).trim().toUpperCase();
+            if (parseFlag(s) === true) s = "✓";
+            const hit = CHECKS.find((o) => nfkc(o).toUpperCase() === s);
+            if (hit === undefined) return "確認は「✓／保留／NG」か空欄です";
+            return setStr(v, "check", hit);
+          },
+        },
+        note: {
+          label: "備考",
+          w: 120,
+          xw: 20,
+          kind: "multi",
+          get: (c, v) => v.note || "",
+          set: (c, v, x) => setStr(v, "note", String(x).replace(/\r\n?/g, "\n")),
+        },
+        done: {
+          label: "済",
+          alias: ["作業済み", "作業"],
+          w: 40,
+          xw: 5,
+          kind: "bool",
+          get: (c, v) => (v.done ? "✓" : ""),
+          set: (c, v, x) => {
+            const f = parseFlag(x);
+            if (f === undefined) return "済は ✓ か空欄です";
+            if (!!v.done === !!f) return "same";
+            v.done = !!f;
+            return "changed";
+          },
+        },
+      };
+      Object.keys(TCOLS).forEach((k) => (TCOLS[k].key = k));
+      const GRID_A = ["no", "cut", "subcut", "r", "priority", "retakeDate", "body", "instr", "mats", "take", "assignee", "returnDate", "check", "note", "done"],
+        GRID_B = ["cut", "subcut", "r", "priority", "body", "done"];
+
+      // ---------- 表示の切り替え（カード／一覧入力、一覧は A=表を全面・B=入力欄つき） ----------
+      let gridSelMark = null,
+        gridRows = [],
+        gridAct = { c: null, v: null, key: "cut" },
+        gridEditing = false,
+        gridEditOrig = "";
+      const gridWide = () => innerWidth > 1180;
+      function gridKeys() {
+        return prefs.gridLayout === "B" && gridWide() ? GRID_B : GRID_A;
+      }
+      function isGridView() {
+        return prefs.view === "grid";
+      }
+      function applyView() {
+        const app = document.querySelector(".app");
+        if (!app || !$("gridPane")) return;
+        const grid = isGridView();
+        if (grid && app.classList.contains("pvZoom")) setPvZoom(false);
+        app.classList.toggle("gridMode", grid);
+        app.classList.toggle("gridB", grid && prefs.gridLayout === "B");
+        document.querySelectorAll("#viewSeg button").forEach((b) => b.classList.toggle("on", b.dataset.view === (grid ? "grid" : "card")));
+        document.querySelectorAll("#gridLayoutSeg button").forEach((b) => b.classList.toggle("on", b.dataset.layout === (prefs.gridLayout === "B" ? "B" : "A")));
+        if (grid) renderGrid();
+        layoutColumns();
+        scalePreview();
+      }
+      function setView(v) {
+        if ((v === "grid") === isGridView()) return;
+        if (gridEditing) gridCommit();
+        prefs.view = v === "grid" ? "grid" : "card";
+        applyView();
+        schedule();
+        if (isGridView()) focusGrid();
+      }
+
+      // ---------- 一覧の描画 ----------
+      function buildGridRows() {
+        const rows = [];
+        (listOrder.length || !cuts.length ? listOrder : cuts.map((c, i) => i)).forEach((i) => {
+          const c = cuts[i];
+          if (!c) return;
+          vers(c)
+            .slice()
+            .sort((a, b) => (a.r | 0) - (b.r | 0))
+            .forEach((v) => rows.push({ c, v }));
+        });
+        rows.push({ c: null, v: null });
+        return rows;
+      }
+      function gridCellHtml(col, c, v, i) {
+        if (!c) return col.key === "body" ? '<span class="gNew">＋ 入力すると新しい行</span>' : "";
+        if (col.key === "no") return String(i + 1);
+        const t = col.get(c, v);
+        if (col.key === "priority" && t) return `<span class="pri ${t === "高" ? "hi" : t === "メーカーR" ? "mk" : "pr"}">${escHtml(t)}</span>`;
+        if (col.key === "mats")
+          return cleanMats(v.mats)
+            .map((m) => {
+              const r = cleanMatR(v.matR)[m];
+              return `<span class="gChip">${escHtml(matLabel(m) || "枠" + (m + 1))}${r ? `<small>R${escHtml(r)}</small>` : ""}</span>`;
+            })
+            .join("");
+        if (col.key === "take") return t ? `<span class="gTake">${escHtml(t)}</span>` : "";
+        if (col.key === "done") return `<span class="gDone${v.done ? " on" : ""}" role="checkbox" aria-checked="${!!v.done}"></span>`;
+        if (col.key === "check" && t) return `<span class="gCheck ${t === "NG" ? "ng" : t === "保留" ? "hold" : "ok"}">${escHtml(t)}</span>`;
+        return escHtml(t);
+      }
+      function renderGrid() {
+        const pane = $("gridPane");
+        if (!pane || !isGridView()) return;
+        if (!listOrder.length && cuts.length) renderList();
+        // 一覧（左）や前／次で選んだカットに、表の選択を合わせる
+        if (cuts[selected] && cuts[selected] !== gridSelMark) {
+          gridAct = { c: cuts[selected], v: verOf(cuts[selected]), key: gridAct.key };
+          gridSelMark = cuts[selected];
+        }
+        gridRows = buildGridRows();
+        const keys = gridKeys(),
+          cols = keys.map((k) => TCOLS[k]);
+        const open = cuts.filter((c) => !latestVer(c).done).length;
+        $("gridCount").textContent = `${common().code || "作品"} / ${common().ep || "--"}　${gridRows.length - 1}行（${cuts.length}カット・未了 ${open}）`;
+        let html = "<colgroup>" + cols.map((c) => `<col${c.w ? ` style="width:${c.w}px"` : ""}>`).join("") + "</colgroup><thead><tr>";
+        html += cols.map((c) => `<th data-k="${c.key}">${escHtml(c.label)}</th>`).join("") + "</tr></thead><tbody>";
+        gridRows.forEach((row, i) => {
+          const cls = !row.c ? "newRow" : row.v.done ? "done" : "";
+          html += `<tr data-i="${i}" class="${cls}">`;
+          cols.forEach((col) => {
+            const ccls = [col.kind === "multi" ? "multi" : "", col.key === "retakeDate" || col.key === "returnDate" || col.key === "r" ? "nowrap" : "", col.key === "no" ? "num" : "", col.key === "cut" ? "cutCol" : "", col.kind === "bool" || col.key === "r" || col.key === "take" ? "ctr" : "", col.key === "instr" ? "red" : ""].filter(Boolean).join(" ");
+            html += `<td data-k="${col.key}" class="${ccls}"><div class="gc">${gridCellHtml(col, row.c, row.v, i)}</div></td>`;
+          });
+          html += "</tr>";
+        });
+        html += "</tbody>";
+        $("gridTable").innerHTML = html;
+        // リテイク内容の列（幅の指定なし）が潰れないよう、表の最小幅を決める
+        $("gridTable").style.minWidth = cols.reduce((a, c) => a + (c.w || 230), 0) + "px";
+        if (!keys.includes(gridAct.key)) gridAct.key = keys.includes("cut") ? "cut" : keys[0];
+        placeGridEditor();
+      }
+      function gridRowIndex() {
+        const i = gridRows.findIndex((r) => r.c === gridAct.c && r.v === gridAct.v);
+        return i < 0 ? (gridAct.c ? 0 : gridRows.length - 1) : i;
+      }
+      function activeTd() {
+        const i = gridRowIndex();
+        return $("gridTable").querySelector(`tr[data-i="${i}"] td[data-k="${gridAct.key}"]`);
+      }
+      function placeGridEditor() {
+        const ed = $("gridEdit"),
+          td = activeTd();
+        $("gridTable").querySelectorAll(".act").forEach((x) => x.classList.remove("act"));
+        $("gridTable").querySelectorAll("tr.sel").forEach((x) => x.classList.remove("sel"));
+        if (!td) {
+          ed.style.display = "none";
+          return;
+        }
+        td.classList.add("act");
+        td.parentElement.classList.add("sel");
+        const box = $("gridScroll"),
+          r = td.getBoundingClientRect(),
+          br = box.getBoundingClientRect();
+        ed.style.display = "block";
+        ed.style.left = r.left - br.left + box.scrollLeft + "px";
+        ed.style.top = r.top - br.top + box.scrollTop + "px";
+        ed.style.width = Math.max(r.width, gridEditing ? 160 : 0) + "px";
+        ed.style.minHeight = r.height + "px";
+        ed.style.height = gridEditing ? "auto" : r.height + "px";
+        if (gridEditing) {
+          ed.style.height = Math.max(r.height, ed.scrollHeight + 2) + "px";
+        }
+        ed.classList.toggle("editing", gridEditing);
+      }
+      function scrollActIntoView() {
+        const td = activeTd();
+        if (!td) return;
+        const box = $("gridScroll"),
+          head = $("gridTable").querySelector("thead"),
+          hh = head ? head.offsetHeight : 0,
+          r = td.getBoundingClientRect(),
+          br = box.getBoundingClientRect();
+        if (r.top < br.top + hh) box.scrollTop -= br.top + hh - r.top;
+        else if (r.bottom > br.bottom) box.scrollTop += r.bottom - br.bottom;
+        if (r.left < br.left) box.scrollLeft -= br.left - r.left;
+        else if (r.right > br.right) box.scrollLeft += r.right - br.right;
+      }
+      function focusGrid() {
+        if (!isGridView()) return;
+        if (!gridAct.c && !gridAct.v && gridRows.length > 1 && cuts[selected]) {
+          gridAct.c = cuts[selected];
+          gridAct.v = verOf(cuts[selected]);
+        }
+        placeGridEditor();
+        $("gridEdit").focus({ preventScroll: true });
+      }
+      // 選んだ行のカットを、カード側（一覧・入力欄）でも選ぶ
+      function gridSyncSelection() {
+        const c = gridAct.c;
+        if (!c) return;
+        const i = cuts.indexOf(c);
+        if (i < 0) return;
+        const vi = vers(c).indexOf(gridAct.v);
+        const changed = i !== selected || (vi >= 0 && vi !== (c.selectedVer | 0));
+        gridSelMark = c;
+        if (!changed) return;
+        if (dirty) flushSave();
+        selected = i;
+        if (vi >= 0) c.selectedVer = vi;
+        loadToForm();
+        renderList();
+        renderPreview();
+        revealActive();
+      }
+      function gridMove(dr, dc) {
+        const keys = gridKeys();
+        let ri = gridRowIndex() + dr,
+          ci = keys.indexOf(gridAct.key) + dc;
+        ri = Math.max(0, Math.min(gridRows.length - 1, ri));
+        ci = Math.max(0, Math.min(keys.length - 1, ci));
+        gridAct = { c: gridRows[ri].c, v: gridRows[ri].v, key: keys[ci] };
+        placeGridEditor();
+        scrollActIntoView();
+        placeGridEditor();
+        gridSyncSelection();
+      }
+
+      // ---------- セルの編集（下に重ねた入力欄 1つで受ける。日本語入力をそのまま打ち始められる） ----------
+      function gridColAct() {
+        return TCOLS[gridAct.key];
+      }
+      function gridBeginEdit(initial) {
+        const col = gridColAct();
+        if (!col || col.kind === "ro") return;
+        if (col.kind === "bool") return gridToggleBool();
+        const ed = $("gridEdit");
+        gridEditing = true;
+        if (initial === undefined) {
+          gridEditOrig = gridAct.c ? (col.edit || col.get)(gridAct.c, gridAct.v) : "";
+          ed.value = gridEditOrig;
+        } else gridEditOrig = gridAct.c ? (col.edit || col.get)(gridAct.c, gridAct.v) : "";
+        placeGridEditor();
+        const n = ed.value.length;
+        ed.setSelectionRange(n, n);
+      }
+      function gridCancel() {
+        gridEditing = false;
+        $("gridEdit").value = "";
+        placeGridEditor();
+      }
+      function gridToggleBool() {
+        if (!gridAct.c) return;
+        gridApply(gridAct.c, gridAct.v, gridAct.key, gridAct.v.done ? "" : "✓");
+      }
+      // 新しい行に入力したとき: カット番号を入れたならそのカット（あれば新しい版）、ほかの欄なら前の行の次の番号で作る
+      function nextCutNo() {
+        const last = gridRows
+          .filter((x) => x.c && x.c.cut)
+          .map((x) => x.c.cut)
+          .pop();
+        const m = /^(\d+)/.exec(last || "");
+        return m ? String(+m[1] + 1).padStart(m[1].length, "0") : "";
+      }
+      function gridNewRow(cutNo) {
+        cutNo = cleanCut(cutNo || "");
+        const ex = cutNo && cuts.find((c) => c.cut === cutNo);
+        if (ex) {
+          const vs = vers(ex),
+            r = nextFreeR(vs, Math.max(...vs.map((v) => v.r | 0)) + 1),
+            v = Object.assign(emptyVer(r), { retakeDate: prefs.lastRetakeDate || "" });
+          vs.push(v);
+          return { c: ex, v };
+        }
+        const c = {
+          id: newId("c"),
+          cut: cutNo || nextCutNo(),
+          subcut: "",
+          priority: "",
+          selectedVer: 0,
+          versions: [Object.assign(emptyVer(common().r), { retakeDate: prefs.lastRetakeDate || "" })],
+        };
+        cuts.push(c);
+        kenyoOnCutNumber(c, cuts);
+        return { c, v: c.versions[0] };
+      }
+      // 1つのセルに値を入れる（一覧の入力・貼り付けで共通）。エラーなら文を返す
+      function gridSet(c, v, key, val) {
+        const col = TCOLS[key];
+        if (!col || col.kind === "ro") return "same";
+        if (key === "cut") {
+          const x = cleanCut(val);
+          if (x === c.cut) return "same";
+          c.cut = x;
+          kenyoOnCutNumber(c, cuts);
+          return "changed";
+        }
+        if (key === "subcut") {
+          const old = c.subcut || "";
+          const res = col.set(c, v, val);
+          if (res === "changed") kenyoOnSubcut(c, old, cuts);
+          return res;
+        }
+        const res = col.set(c, v, val);
+        // 最後に入れたリテイク日を覚え、新しいカット・版の初期値に使う
+        if (key === "retakeDate" && res === "changed" && v.retakeDate) prefs.lastRetakeDate = v.retakeDate;
+        return res;
+      }
+      function gridApply(c, v, key, val) {
+        let made = null;
+        if (!c) {
+          made = gridNewRow(key === "cut" ? val : "");
+          c = made.c;
+          v = made.v;
+          if (key === "cut") val = c.cut;
+        }
+        const res = gridSet(c, v, key, val);
+        if (res !== "same" && res !== "changed") {
+          gridFlash(res);
+          if (!made) return false;
+        }
+        gridAct = { c, v, key };
+        schedule();
+        renderList();
+        renderGrid();
+        if (cuts[selected] === c || made) {
+          gridSelMark = c;
+          selected = cuts.indexOf(c);
+          c.selectedVer = Math.max(0, vers(c).indexOf(v));
+          loadToForm();
+          renderPreview();
+        }
+        return true;
+      }
+      function gridCommit() {
+        if (!gridEditing) return true;
+        const ed = $("gridEdit"),
+          val = ed.value;
+        gridEditing = false;
+        ed.value = "";
+        if (val === gridEditOrig) {
+          placeGridEditor();
+          return true;
+        }
+        const ok = gridApply(gridAct.c, gridAct.v, gridAct.key, val);
+        placeGridEditor();
+        return ok;
+      }
+      let gridFlashTimer = 0;
+      function gridFlash(msg) {
+        const el = $("gridMsg");
+        el.textContent = msg;
+        el.classList.add("show");
+        clearTimeout(gridFlashTimer);
+        gridFlashTimer = setTimeout(() => el.classList.remove("show"), 4000);
+      }
+      // 表計算ソフトからの貼り付け（タブ区切り。セル内改行は "" で囲まれている）
+      function parseDelimited(text, delim) {
+        const rows = [];
+        let row = [],
+          cell = "",
+          q = false;
+        text = String(text).replace(/\r\n?/g, "\n");
+        for (let i = 0; i < text.length; i++) {
+          const ch = text[i];
+          if (q) {
+            if (ch === '"') {
+              if (text[i + 1] === '"') {
+                cell += '"';
+                i++;
+              } else q = false;
+            } else cell += ch;
+          } else if (ch === '"' && cell === "") q = true;
+          else if (ch === delim) {
+            row.push(cell);
+            cell = "";
+          } else if (ch === "\n") {
+            row.push(cell);
+            rows.push(row);
+            row = [];
+            cell = "";
+          } else cell += ch;
+        }
+        if (cell !== "" || row.length) {
+          row.push(cell);
+          rows.push(row);
+        }
+        return rows;
+      }
+      function gridPaste(text) {
+        const m = parseDelimited(text, "\t");
+        if (!m.length) return;
+        const keys = gridKeys(),
+          ci0 = keys.indexOf(gridAct.key),
+          ri0 = gridRowIndex();
+        // 入力済みのセルを上書きする数を数えて、あれば確認する
+        let over = 0;
+        m.forEach((r, i) => {
+          const row = gridRows[ri0 + i];
+          if (!row || !row.c) return;
+          r.forEach((val, j) => {
+            const col = TCOLS[keys[ci0 + j]];
+            const cur = col && col.kind !== "ro" ? (col.edit || col.get)(row.c, row.v) : "";
+            if (cur && cur !== val) over++;
+          });
+        });
+        if (over && !confirm(`入力済みの ${over} 個のセルを、貼り付ける内容で置き換えます。よろしいですか？`)) return;
+        const errs = [];
+        let target = gridRows.slice(ri0);
+        m.forEach((r, i) => {
+          let row = target[i];
+          if (!row || !row.c) {
+            const cutJ = keys.slice(ci0, ci0 + r.length).indexOf("cut");
+            row = gridNewRow(cutJ >= 0 ? r[cutJ] : "");
+            gridRows.splice(gridRows.length - 1, 0, row);
+            target = gridRows.slice(ri0);
+          }
+          r.forEach((val, j) => {
+            const key = keys[ci0 + j];
+            if (!key) return;
+            const res = gridSet(row.c, row.v, key, val);
+            if (res !== "same" && res !== "changed") errs.push(`${i + 1}行目：${res}`);
+          });
+        });
+        schedule();
+        renderList();
+        renderGrid();
+        loadToForm();
+        renderPreview();
+        gridFlash(`貼り付け：${m.length}行×${Math.max(...m.map((r) => r.length))}列` + (errs.length ? `（読めない値 ${errs.length}件：${errs[0]}${errs.length > 1 ? " ほか" : ""}）` : ""));
+      }
+      function gridKeydown(e) {
+        if (e.isComposing || e.keyCode === 229) return;
+        const col = gridColAct();
+        if (gridEditing && (e.ctrlKey || e.metaKey || e.altKey) && SHORTCUT_ACTIONS.some((a) => matchShortcut(e, prefs.shortcuts[a.id]))) {
+          // ショートカット（追加・書き出し・前後のカット）は、入力中の値を確定してから動かす
+          gridCommit();
+          return;
+        }
+        if (gridEditing) {
+          if (e.key === "Enter" && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            if (gridCommit()) gridMove(1, 0);
+          } else if (e.key === "Enter" && (e.altKey || (e.shiftKey && col.kind !== "multi"))) {
+            // 1行の欄は Shift+Enter でも確定（改行は複数行の欄だけ）
+            if (col.kind !== "multi") {
+              e.preventDefault();
+              gridCommit();
+            }
+          } else if (e.key === "Tab") {
+            e.preventDefault();
+            if (gridCommit()) gridMove(0, e.shiftKey ? -1 : 1);
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            e.stopPropagation();
+            gridCancel();
+          }
+          return;
+        }
+        if (e.ctrlKey || e.metaKey || e.altKey) return; // コピー・貼り付け・ショートカットはそのまま
+        const k = e.key;
+        if (k === "ArrowDown" || k === "ArrowUp" || k === "ArrowLeft" || k === "ArrowRight") {
+          e.preventDefault();
+          gridMove(k === "ArrowDown" ? 1 : k === "ArrowUp" ? -1 : 0, k === "ArrowRight" ? 1 : k === "ArrowLeft" ? -1 : 0);
+        } else if (k === "Tab") {
+          e.preventDefault();
+          gridMove(0, e.shiftKey ? -1 : 1);
+        } else if (k === "Enter" || k === "F2") {
+          e.preventDefault();
+          if (col.kind === "choice") openGridChoice();
+          else gridBeginEdit();
+        } else if (k === " " && col.kind === "bool") {
+          e.preventDefault();
+          gridToggleBool();
+        } else if ((k === "Delete" || k === "Backspace") && gridAct.c) {
+          e.preventDefault();
+          if (col.kind !== "ro" && col.get(gridAct.c, gridAct.v)) gridApply(gridAct.c, gridAct.v, gridAct.key, "");
+        } else if (k === "Home" || k === "End") {
+          e.preventDefault();
+          const keys = gridKeys();
+          gridAct.key = k === "Home" ? keys[0] : keys[keys.length - 1];
+          placeGridEditor();
+          scrollActIntoView();
+        } else if (k === "Escape") {
+          e.preventDefault();
+          $("list").focus({ preventScroll: true });
+        } else if (col.kind === "ro" || col.kind === "bool") {
+          if (k.length === 1) e.preventDefault();
+        }
+      }
+      // 選択肢の欄（優先・確認など）は一覧から選ぶ
+      function openGridChoice() {
+        const col = gridColAct(),
+          td = activeTd(),
+          sel = $("gridChoice");
+        if (!td || !col.options) return;
+        sel.innerHTML = col.options.map((o) => `<option value="${escHtml(o)}">${escHtml(o || "（空欄）")}</option>`).join("");
+        sel.value = gridAct.c ? col.get(gridAct.c, gridAct.v) : "";
+        const box = $("gridScroll"),
+          r = td.getBoundingClientRect(),
+          br = box.getBoundingClientRect();
+        sel.style.left = r.left - br.left + box.scrollLeft + "px";
+        sel.style.top = r.bottom - br.top + box.scrollTop + "px";
+        sel.style.display = "block";
+        sel.size = col.options.length;
+        sel.focus();
+      }
+      function closeGridChoice(apply) {
+        const sel = $("gridChoice");
+        if (sel.style.display !== "block") return;
+        sel.style.display = "none";
+        if (apply) gridApply(gridAct.c, gridAct.v, gridAct.key, sel.value);
+        focusGrid();
+      }
+      function initGrid() {
+        const ed = $("gridEdit"),
+          table = $("gridTable");
+        ed.addEventListener("keydown", gridKeydown);
+        // 打ち始めたら編集に入る（日本語の変換の始まりも含む）
+        ed.addEventListener("compositionstart", () => {
+          if (!gridEditing) {
+            const col = gridColAct();
+            if (col && col.kind !== "ro" && col.kind !== "bool") {
+              gridEditing = true;
+              gridEditOrig = gridAct.c ? (col.edit || col.get)(gridAct.c, gridAct.v) : "";
+              placeGridEditor();
+            }
+          }
+        });
+        ed.addEventListener("input", () => {
+          if (!gridEditing) {
+            const col = gridColAct();
+            if (!col || col.kind === "ro" || col.kind === "bool") {
+              ed.value = "";
+              return;
+            }
+            gridEditing = true;
+            gridEditOrig = gridAct.c ? (col.edit || col.get)(gridAct.c, gridAct.v) : "";
+          }
+          placeGridEditor();
+        });
+        ed.addEventListener("paste", (e) => {
+          const text = (e.clipboardData && e.clipboardData.getData("text/plain")) || "";
+          if (gridEditing && !/[\t\n]/.test(text.replace(/\n$/, ""))) return;
+          if (!/[\t\n]/.test(text.replace(/\n$/, ""))) {
+            // 1つの値なら、そのセルの編集として入れる
+            e.preventDefault();
+            gridBeginEdit();
+            ed.value = text.replace(/\n$/, "");
+            placeGridEditor();
+            return;
+          }
+          e.preventDefault();
+          if (gridEditing) gridCommit();
+          gridPaste(text.replace(/\n$/, ""));
+        });
+        ed.addEventListener("copy", (e) => {
+          if (gridEditing || !gridAct.c) return;
+          e.preventDefault();
+          e.clipboardData.setData("text/plain", TCOLS[gridAct.key].kind === "ro" ? "" : (TCOLS[gridAct.key].edit || TCOLS[gridAct.key].get)(gridAct.c, gridAct.v));
+        });
+        ed.addEventListener("blur", () => {
+          setTimeout(() => {
+            if (document.activeElement !== ed && document.activeElement !== $("gridChoice") && gridEditing) gridCommit();
+          }, 0);
+        });
+        table.addEventListener("mousedown", (e) => {
+          const td = e.target.closest("td");
+          if (!td) return;
+          e.preventDefault();
+          if (gridEditing) gridCommit();
+          const i = +td.parentElement.dataset.i,
+            row = gridRows[i];
+          gridAct = { c: row.c, v: row.v, key: td.dataset.k };
+          placeGridEditor();
+          ed.focus({ preventScroll: true });
+          gridSyncSelection();
+          if (td.dataset.k === "done" && row.c && e.target.closest(".gDone")) gridToggleBool();
+        });
+        table.addEventListener("dblclick", (e) => {
+          const td = e.target.closest("td");
+          if (!td) return;
+          if (td.dataset.k === "no") {
+            const row = gridRows[+td.parentElement.dataset.i];
+            if (row && row.c) {
+              setView("card");
+              return;
+            }
+          }
+          const col = TCOLS[td.dataset.k];
+          if (col.kind === "choice") openGridChoice();
+          else if (col.kind !== "bool") gridBeginEdit();
+        });
+        const sel = $("gridChoice");
+        sel.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            closeGridChoice(true);
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            e.stopPropagation();
+            closeGridChoice(false);
+          }
+        });
+        sel.addEventListener("click", (e) => {
+          if (e.target.tagName === "OPTION") closeGridChoice(true);
+        });
+        sel.addEventListener("blur", () => setTimeout(() => (sel.style.display = "none"), 0));
+        $("gridScroll").addEventListener("scroll", () => {
+          if (!gridEditing) placeGridEditor();
+        });
+        document.querySelectorAll("#viewSeg button").forEach((b) => (b.onclick = () => setView(b.dataset.view)));
+        document.querySelectorAll("#gridLayoutSeg button").forEach(
+          (b) =>
+            (b.onclick = () => {
+              if (!gridWide() && b.dataset.layout === "B") {
+                gridFlash("画面の幅が狭いときは、表を全面に出す形だけになります");
+                return;
+              }
+              prefs.gridLayout = b.dataset.layout === "B" ? "B" : "A";
+              applyView();
+              schedule();
+              focusGrid();
+            }),
+        );
+        addEventListener("resize", () => {
+          if (isGridView()) {
+            renderGrid();
+          }
+        });
+      }
+      // ---------- xlsx を作る（外部ライブラリなし。ZIP は無圧縮で、Excel・Google スプレッドシート・LibreOffice で開ける） ----------
+      function zipBlob(files, type) {
+        const enc = new TextEncoder(),
+          parts = [],
+          central = [];
+        let offset = 0;
+        for (const f of files) {
+          const nameU8 = enc.encode(f.name),
+            data = typeof f.data === "string" ? enc.encode(f.data) : f.data,
+            crc = crc32(data);
+          const lh = new DataView(new ArrayBuffer(30));
+          lh.setUint32(0, 0x04034b50, true);
+          lh.setUint16(4, 20, true);
+          lh.setUint16(6, 0x0800, true);
+          lh.setUint16(12, 0x21, true);
+          lh.setUint32(14, crc, true);
+          lh.setUint32(18, data.length, true);
+          lh.setUint32(22, data.length, true);
+          lh.setUint16(26, nameU8.length, true);
+          parts.push(lh.buffer, nameU8, data);
+          central.push({ nameU8, crc, size: data.length, offset });
+          offset += 30 + nameU8.length + data.length;
+        }
+        const cdParts = [];
+        let cdSize = 0;
+        for (const e of central) {
+          const ch = new DataView(new ArrayBuffer(46));
+          ch.setUint32(0, 0x02014b50, true);
+          ch.setUint16(4, 20, true);
+          ch.setUint16(6, 20, true);
+          ch.setUint16(8, 0x0800, true);
+          ch.setUint16(14, 0x21, true);
+          ch.setUint32(16, e.crc, true);
+          ch.setUint32(20, e.size, true);
+          ch.setUint32(24, e.size, true);
+          ch.setUint16(28, e.nameU8.length, true);
+          ch.setUint32(42, e.offset, true);
+          cdParts.push(ch.buffer, e.nameU8);
+          cdSize += 46 + e.nameU8.length;
+        }
+        const end = new DataView(new ArrayBuffer(22));
+        end.setUint32(0, 0x06054b50, true);
+        end.setUint16(8, central.length, true);
+        end.setUint16(10, central.length, true);
+        end.setUint32(12, cdSize, true);
+        end.setUint32(16, offset, true);
+        return new Blob([...parts, ...cdParts, end.buffer], { type });
+      }
+      const xmlEsc = (v) =>
+        String(v == null ? "" : v)
+          .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, "")
+          .replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+      const colLetter = (i) => {
+        let s = "";
+        i++;
+        while (i) {
+          const m = (i - 1) % 26;
+          s = String.fromCharCode(65 + m) + s;
+          i = (i - 1 - m) / 26;
+        }
+        return s;
+      };
+      // 書式をまとめて持つ（同じ組み合わせは同じ番号を使う）
+      function xlsxStyles() {
+        const fonts = ['<font><sz val="10"/><name val="Meiryo"/><family val="3"/></font>'],
+          fills = ['<fill><patternFill patternType="none"/></fill>', '<fill><patternFill patternType="gray125"/></fill>'],
+          borders = ['<border><left/><right/><top/><bottom/><diagonal/></border>'],
+          xfs = ['<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'];
+        const fMap = new Map(),
+          flMap = new Map(),
+          bMap = new Map(),
+          xMap = new Map();
+        const font = (o) => {
+          const k = JSON.stringify(o);
+          if (!fMap.has(k)) {
+            fMap.set(k, fonts.length);
+            fonts.push(`<font>${o.b ? "<b/>" : ""}${o.i ? "<i/>" : ""}<sz val="${o.sz || 10}"/>${o.color ? `<color rgb="FF${o.color}"/>` : ""}<name val="Meiryo"/><family val="3"/></font>`);
+          }
+          return fMap.get(k);
+        };
+        const fill = (rgb) => {
+          if (!rgb) return 0;
+          if (!flMap.has(rgb)) {
+            flMap.set(rgb, fills.length);
+            fills.push(`<fill><patternFill patternType="solid"><fgColor rgb="FF${rgb}"/><bgColor indexed="64"/></patternFill></fill>`);
+          }
+          return flMap.get(rgb);
+        };
+        const border = (o) => {
+          if (!o) return 0;
+          const k = JSON.stringify(o);
+          if (!bMap.has(k)) {
+            bMap.set(k, borders.length);
+            const side = (n, st) => (st ? `<${n} style="${st}"><color rgb="FF${o.color || "9A9893"}"/></${n}>` : `<${n}/>`);
+            borders.push(`<border>${side("left", o.l)}${side("right", o.r)}${side("top", o.t)}${side("bottom", o.b)}<diagonal/></border>`);
+          }
+          return bMap.get(k);
+        };
+        return {
+          xf(o) {
+            o = o || {};
+            const fi = font(o.font || {}),
+              fl = fill(o.fill),
+              bo = border(o.border),
+              al = `<alignment${o.h ? ` horizontal="${o.h}"` : ""} vertical="${o.v || "center"}"${o.wrap ? ' wrapText="1"' : ""}/>`;
+            const k = [fi, fl, bo, al].join("|");
+            if (!xMap.has(k)) {
+              xMap.set(k, xfs.length);
+              xfs.push(`<xf numFmtId="0" fontId="${fi}" fillId="${fl}" borderId="${bo}" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">${al}</xf>`);
+            }
+            return xMap.get(k);
+          },
+          xml() {
+            return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="${fonts.length}">${fonts.join("")}</fonts><fills count="${fills.length}">${fills.join("")}</fills><borders count="${borders.length}">${borders.join("")}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${xfs.length}">${xfs.join("")}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+          },
+        };
+      }
+      // sheet: { name, cols:[幅], rows:[{h, cells:[{v, s}]}], merges:["A1:D1"], freeze:{row, col}, filter:"A4:O20", printTitle:"4:4", validations:[{sqref, list:[..]}] }
+      function sheetXml(sh) {
+        const rows = sh.rows
+          .map((r, ri) => {
+            const cells = r.cells
+              .map((c, ci) => {
+                if (!c) return "";
+                const ref = colLetter(ci) + (ri + 1),
+                  s = c.s ? ` s="${c.s}"` : "";
+                if (c.v == null || c.v === "") return c.s ? `<c r="${ref}"${s}/>` : "";
+                if (typeof c.v === "number") return `<c r="${ref}"${s}><v>${c.v}</v></c>`;
+                return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${xmlEsc(c.v)}</t></is></c>`;
+              })
+              .join("");
+            return `<row r="${ri + 1}"${r.h ? ` ht="${r.h}" customHeight="1"` : ""}>${cells}</row>`;
+          })
+          .join("");
+        const fr = sh.freeze;
+        const pane = fr
+          ? `<pane${fr.col ? ` xSplit="${fr.col}"` : ""} ySplit="${fr.row}" topLeftCell="${colLetter(fr.col || 0)}${fr.row + 1}" activePane="${fr.col ? "bottomRight" : "bottomLeft"}" state="frozen"/>`
+          : "";
+        const dv = (sh.validations || []).length
+          ? `<dataValidations count="${sh.validations.length}">${sh.validations
+              .map((d) => `<dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="${d.sqref}"><formula1>"${xmlEsc(d.list.join(","))}"</formula1></dataValidation>`)
+              .join("")}</dataValidations>`
+          : "";
+        return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><sheetViews><sheetView workbookViewId="0">${pane}</sheetView></sheetViews><sheetFormatPr defaultRowHeight="18"/><cols>${sh.cols
+          .map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`)
+          .join("")}</cols><sheetData>${rows}</sheetData>${sh.filter ? `<autoFilter ref="${sh.filter}"/>` : ""}${
+          (sh.merges || []).length ? `<mergeCells count="${sh.merges.length}">${sh.merges.map((m) => `<mergeCell ref="${m}"/>`).join("")}</mergeCells>` : ""
+        }${dv}<printOptions horizontalCentered="1"/><pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="${sh.portrait ? "portrait" : "landscape"}" fitToWidth="1" fitToHeight="0"/><headerFooter><oddFooter>&amp;C&amp;P / &amp;N</oddFooter></headerFooter></worksheet>`;
+      }
+      function xlsxBlob(sheets, styles) {
+        const files = [
+          {
+            name: "[Content_Types].xml",
+            data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets
+              .map((s, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`)
+              .join("")}</Types>`,
+          },
+          {
+            name: "_rels/.rels",
+            data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+          },
+          {
+            name: "xl/workbook.xml",
+            data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets>${sheets
+              .map((s, i) => `<sheet name="${xmlEsc(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`)
+              .join("")}</sheets><definedNames>${sheets
+              .map((s, i) => {
+                const q = `'${s.name.replace(/'/g, "''")}'`;
+                return (
+                  (s.filter ? `<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">${xmlEsc(q)}!${s.filter.replace(/([A-Z]+)(\d+)/g, "$$$1$$$2")}</definedName>` : "") +
+                  (s.printTitle ? `<definedName name="_xlnm.Print_Titles" localSheetId="${i}">${xmlEsc(q)}!$${s.printTitle.replace(":", ":$")}</definedName>` : "")
+                );
+              })
+              .join("")}</definedNames></workbook>`,
+          },
+          {
+            name: "xl/_rels/workbook.xml.rels",
+            data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets
+              .map((s, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`)
+              .join("")}<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
+          },
+          { name: "xl/styles.xml", data: styles.xml() },
+        ];
+        sheets.forEach((s, i) => files.push({ name: `xl/worksheets/sheet${i + 1}.xml`, data: sheetXml(s) }));
+        return zipBlob(files, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      }
+
+      // ---------- リテイク表の書き出し（kind: "list"＝一覧型／"check"＝作業チェック型／"template"＝読み込み用テンプレート） ----------
+      function tableRows() {
+        // 全カット（絞り込みに関係なく）を、カット番号順・Rの順で
+        sortCuts();
+        const rows = [];
+        cuts.forEach((c) =>
+          vers(c)
+            .slice()
+            .sort((a, b) => (a.r | 0) - (b.r | 0))
+            .forEach((v) => rows.push({ c, v })),
+        );
+        return rows;
+      }
+      function tableLayout(kind) {
+        const labels = [];
+        for (let i = 0; i < MAT_SLOTS; i++) if (matLabel(i)) labels.push(i);
+        const matCols = labels.map((i) => ({ key: "mat" + i, label: matLabel(i), xw: 5, mat: i }));
+        const K = (k) => TCOLS[k];
+        if (kind === "list") return ["no", "cut", "subcut", "r", "priority", "retakeDate", "body", "instr", "mats", "take", "note", "done"].map(K);
+        if (kind === "check")
+          return [...["no", "cut", "subcut", "r", "priority", "body", "instr"].map(K), ...matCols, ...["take", "assignee", "returnDate", "check", "note", "done"].map(K)];
+        return [...["cut", "subcut", "r", "priority", "retakeDate", "body", "instr", "instrColor"].map(K), ...matCols, ...["take", "takeNo", "assignee", "returnDate", "check", "note", "done"].map(K)];
+      }
+      function tableFileName(kind) {
+        const cm = common(),
+          d = new Date(),
+          ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+        const name = { list: "retake_table", check: "retake_check", template: "retake_input" }[kind];
+        return `${name}_${cm.code || "work"}_${cm.ep || "ep"}_${ymd}.xlsx`;
+      }
+      function buildTableXlsx(kind) {
+        const st = xlsxStyles(),
+          cols = tableLayout(kind),
+          n = cols.length,
+          cm = common();
+        const line = { l: "thin", r: "thin", t: "hair", b: "hair" };
+        const head = st.xf({ font: { b: true, color: "FFFFFF" }, fill: "2C2C2B", border: { l: "thin", r: "thin", t: "medium", b: "medium", color: "2C2C2B" }, h: "center", wrap: true });
+        const headMat = st.xf({ font: { b: true, color: "FFFFFF" }, fill: "8A3B32", border: { l: "thin", r: "thin", t: "medium", b: "medium", color: "2C2C2B" }, h: "center" });
+        const headMemo = st.xf({ font: { b: true, color: "FFFFFF" }, fill: "9A6A00", border: { l: "thin", r: "thin", t: "medium", b: "medium", color: "2C2C2B" }, h: "center" });
+        const rows = [],
+          merges = [],
+          validations = [];
+        const title = { list: "リテイク表", check: "リテイク表（作業チェック）", template: "AniRetake 読み込み用シート" }[kind];
+        rows.push({ h: 30, cells: [{ v: title, s: st.xf({ font: { b: true, sz: 16 } }) }] });
+        merges.push(`A1:${colLetter(n - 1)}1`);
+        const rowsData = kind === "template" ? [] : tableRows();
+        rows.push({
+          h: 20,
+          cells: [
+            {
+              v: `作品コード  ${cm.code || ""}　　話数  ${cm.ep || ""}　　${kind === "template" ? "見出し（4行目）の文字は変えないでください。列の順番は入れ替えても読めます。灰色の「例」の行は読み込みません。" : `${new Set(rowsData.map((r) => r.c)).size}カット　　書き出し ${fmtYmd(new Date().toISOString().slice(0, 10))}`}`,
+              s: st.xf({ font: { b: kind !== "template", sz: kind === "template" ? 9 : 11, color: kind === "template" ? "7D7A75" : "2C2C2B" } }),
+            },
+          ],
+        });
+        merges.push(`A2:${colLetter(n - 1)}2`);
+        // 3行目: まとまりの見出し（撮入れ素材・記入欄）
+        const r3 = [];
+        const firstMat = cols.findIndex((c) => c.mat != null),
+          lastMat = cols.length - 1 - [...cols].reverse().findIndex((c) => c.mat != null);
+        if (firstMat >= 0) {
+          r3[firstMat] = { v: "撮入れ素材", s: st.xf({ font: { b: true, sz: 9, color: "FFFFFF" }, fill: "5B5955", h: "center" }) };
+          if (lastMat > firstMat) merges.push(`${colLetter(firstMat)}3:${colLetter(lastMat)}3`);
+        }
+        const memo = ["assignee", "returnDate", "check"].map((k) => cols.findIndex((c) => c.key === k)).filter((i) => i >= 0);
+        if (memo.length && kind === "check") {
+          r3[memo[0]] = { v: "記入欄", s: st.xf({ font: { b: true, sz: 9 }, fill: "FFF3D6", h: "center" }) };
+          merges.push(`${colLetter(memo[0])}3:${colLetter(memo[memo.length - 1])}3`);
+        }
+        if (kind === "template") r3[0] = { v: "必須はカット（カードの書き出しにはリテイク内容も必要）", s: st.xf({ font: { b: true, sz: 8 } }) };
+        rows.push({ h: 16, cells: r3 });
+        rows.push({ h: 24, cells: cols.map((c) => ({ v: c.label, s: c.mat != null ? headMat : memo.length && kind === "check" && ["assignee", "returnDate", "check"].includes(c.key) ? headMemo : head })) });
+        const H = 4;
+        const cellStyle = (c, opt) => {
+          const center = ["no", "cut", "subcut", "r", "priority", "take", "takeNo", "done", "check", "instrColor", "retakeDate", "returnDate"].includes(c.key) || c.mat != null;
+          return st.xf({
+            font: { b: c.key === "cut", color: opt.done ? "8A8F8C" : c.key === "instr" || c.mat != null ? "C0392B" : opt.ex ? "9A9893" : "2C2C2B", i: !!opt.ex },
+            fill: opt.ex ? "F3F2F0" : opt.done ? "EEF6F1" : c.key === "priority" && opt.pri ? { 高: "FDE8E5", メーカーR: "FFF3D6", 優先: "E8F1FD" }[opt.pri] : opt.memo ? "FFFDF5" : null,
+            border: line,
+            h: center ? "center" : "left",
+            wrap: true,
+          });
+        };
+        const valOf = (c, row, i) => {
+          if (c.key === "no") return i + 1;
+          if (c.mat != null) {
+            if (!cleanMats(row.v.mats).includes(c.mat)) return "";
+            const r = cleanMatR(row.v.matR)[c.mat];
+            return r ? "R" + r : "●";
+          }
+          return c.get(row.c, row.v);
+        };
+        if (kind === "template") {
+          const ex = [
+            { cut: "例 012", r: "1", priority: "高", retakeDate: "2026/10/09", body: "口パクが音声とずれている", take: "本撮", takeNo: "1" },
+            { cut: "例 015", r: "2", body: "画面揺れが強すぎる", instr: "揺れ幅を半分に", instrColor: "赤", take: "T撮", takeNo: "2", note: "撮影処理のみ" },
+          ];
+          ex.forEach((e, k) => {
+            rows.push({
+              h: 22,
+              cells: cols.map((c) => ({ v: c.mat != null ? (c.mat === (k === 0 ? 0 : 4) ? "●" : "") : e[c.key] || "", s: cellStyle(c, { ex: true }) })),
+            });
+          });
+          for (let k = 0; k < 60; k++) rows.push({ h: 22, cells: cols.map((c) => ({ v: "", s: cellStyle(c, {}) })) });
+        } else
+          rowsData.forEach((row, i) => {
+            const done = !!row.v.done;
+            rows.push({
+              h: 30,
+              cells: cols.map((c) => ({ v: valOf(c, row, i), s: cellStyle(c, { done, pri: row.c.priority, memo: kind === "check" && ["assignee", "returnDate", "check"].includes(c.key) }) })),
+            });
+          });
+        const last = rows.length;
+        if (last > H) {
+          // 入力しやすいようにプルダウンを付ける
+          const at = (k) => cols.findIndex((c) => c.key === k);
+          const add = (i, list) => i >= 0 && validations.push({ sqref: `${colLetter(i)}${H + 1}:${colLetter(i)}${Math.max(last, H + 60)}`, list });
+          add(at("priority"), PRIORITIES.filter(Boolean));
+          add(at("check"), CHECKS.filter(Boolean));
+          add(at("done"), ["✓"]);
+          add(at("instrColor"), ["黒", "赤", "青"]);
+          if (kind === "template") add(at("take"), TAKE_TYPES.map((t) => t.label));
+          cols.forEach((c, i) => c.mat != null && add(i, ["●"]));
+        }
+        const sheets = [
+          {
+            name: kind === "template" ? "リテイク入力" : "リテイク表",
+            cols: cols.map((c) => c.xw || 8),
+            rows,
+            merges,
+            validations,
+            freeze: { row: H, col: kind === "template" ? 1 : 2 },
+            filter: kind === "template" ? "" : `A${H}:${colLetter(n - 1)}${Math.max(H + 1, last)}`,
+            printTitle: `${H}:${H}`,
+          },
+        ];
+        if (kind === "template") {
+          const t = st.xf({ font: { b: true, sz: 13 } }),
+            p = st.xf({ wrap: true, v: "top" });
+          const lines = [
+            "1. 「リテイク入力」シートの5行目以降に、1行＝1カット（1つの版）で入力します。",
+            "2. 必須はカットだけです（カードを書き出すにはリテイク内容も必要です）。他の列は空欄で構いません。",
+            "3. AniRetake の「表を読み込む」で、このファイル（xlsx／CSV）を選ぶか、範囲をコピーして貼り付けます。",
+            "4. 読み込む前に、新規・更新・変化なし・エラーの一覧が出ます。確認してから取り込みます（勝手に上書きしません）。",
+            "",
+            "・同じカット番号・同じRの版がすでにあれば「更新」、Rが違えば新しい版として追加します。Rが空欄なら、そのカットの最新の版を更新します。",
+            "・空欄のセルは、すでに入っている内容を消しません（消したいときはアプリ側で消します）。",
+            "・撮入れ素材は ● で印を付けます（R2 のように書くと素材ごとのR回数になります）。",
+            "・撮影は 本撮／T撮／線撮 から選び、テイクに番号を入れます。「v-01」のように1つの欄に書いても読めます。",
+            "・兼用を書くと、兼用先のカットにも兼用カット番号が入ります（兼用先のカットがあるときだけ）。",
+            "・参考画像は表では扱いません。読み込んだあと、アプリでカードに追加してください。",
+            "・AniRetake から書き出したリテイク表（一覧型・作業チェック型）も、同じ見出しなのでそのまま読み込めます。",
+          ];
+          sheets.push({
+            name: "使い方",
+            portrait: true,
+            cols: [110],
+            rows: [{ h: 26, cells: [{ v: "AniRetake 読み込み用シートの使い方", s: t }] }, { cells: [] }, ...lines.map((x) => ({ h: 20, cells: [{ v: x, s: p }] }))],
+          });
+        }
+        return xlsxBlob(sheets, st);
+      }
+      async function exportTable(kind) {
+        await waitImgs();
+        if (dirty) flushSave();
+        if (gridEditing) gridCommit();
+        downloadBlob(tableFileName(kind), buildTableXlsx(kind));
+      }
+
+      // ---------- 表の読み込み（xlsx・CSV・貼り付け） ----------
+      async function unzipEntries(buf) {
+        const u8 = new Uint8Array(buf),
+          dv = new DataView(buf);
+        let eocd = -1;
+        for (let i = u8.length - 22; i >= Math.max(0, u8.length - 65557); i--)
+          if (dv.getUint32(i, true) === 0x06054b50) {
+            eocd = i;
+            break;
+          }
+        if (eocd < 0) throw new Error("zip");
+        const count = dv.getUint16(eocd + 10, true);
+        let p = dv.getUint32(eocd + 16, true);
+        const out = new Map(),
+          dec = new TextDecoder();
+        for (let k = 0; k < count; k++) {
+          if (dv.getUint32(p, true) !== 0x02014b50) throw new Error("zip");
+          const method = dv.getUint16(p + 10, true),
+            csize = dv.getUint32(p + 20, true),
+            nlen = dv.getUint16(p + 28, true),
+            elen = dv.getUint16(p + 30, true),
+            clen = dv.getUint16(p + 32, true),
+            loff = dv.getUint32(p + 42, true),
+            name = dec.decode(u8.subarray(p + 46, p + 46 + nlen));
+          out.set(name, { method, csize, loff });
+          p += 46 + nlen + elen + clen;
+        }
+        const read = async (name) => {
+          const e = out.get(name);
+          if (!e) return null;
+          const start = e.loff + 30 + dv.getUint16(e.loff + 26, true) + dv.getUint16(e.loff + 28, true),
+            data = u8.subarray(start, start + e.csize);
+          if (e.method === 0) return dec.decode(data);
+          if (e.method !== 8 || typeof DecompressionStream === "undefined") throw new Error("deflate");
+          const ds = new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+          return await new Response(ds).text();
+        };
+        return { names: [...out.keys()], read };
+      }
+      const xmlDoc = (s) => new DOMParser().parseFromString(s, "application/xml");
+      const byTag = (el, tag) => [...el.getElementsByTagName(tag)];
+      // xlsx の各シートを [行][列] の値（文字か数値）にする
+      async function readXlsx(buf) {
+        const z = await unzipEntries(buf);
+        const wb = xmlDoc(await z.read("xl/workbook.xml"));
+        const rels = xmlDoc((await z.read("xl/_rels/workbook.xml.rels")) || "<r/>");
+        const relMap = new Map(byTag(rels, "Relationship").map((r) => [r.getAttribute("Id"), r.getAttribute("Target")]));
+        const ssXml = await z.read("xl/sharedStrings.xml");
+        const shared = ssXml ? byTag(xmlDoc(ssXml), "si").map((si) => byTag(si, "t").map((t) => t.textContent).join("")) : [];
+        const sheets = [];
+        for (const s of byTag(wb, "sheet")) {
+          const rid = s.getAttribute("r:id") || s.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
+          let target = relMap.get(rid) || "";
+          target = target.replace(/^\/?xl\//, "").replace(/^\//, "");
+          const xml = await z.read("xl/" + target);
+          if (!xml) continue;
+          const rows = [];
+          byTag(xmlDoc(xml), "row").forEach((row) => {
+            const ri = (+row.getAttribute("r") || rows.length + 1) - 1,
+              arr = (rows[ri] = rows[ri] || []);
+            byTag(row, "c").forEach((c, k) => {
+              const ref = c.getAttribute("r") || "";
+              const letters = (/^[A-Z]+/.exec(ref) || [""])[0];
+              let ci = k;
+              if (letters) {
+                ci = 0;
+                for (const ch of letters) ci = ci * 26 + (ch.charCodeAt(0) - 64);
+                ci--;
+              }
+              const t = c.getAttribute("t"),
+                vEl = c.getElementsByTagName("v")[0],
+                v = vEl ? vEl.textContent : "";
+              let val;
+              if (t === "s") val = shared[+v] || "";
+              else if (t === "inlineStr") val = byTag(c, "t").map((x) => x.textContent).join("");
+              else if (t === "str" || t === "e") val = v;
+              else if (t === "b") val = v === "1" ? "TRUE" : "FALSE";
+              else val = v === "" ? "" : Number(v);
+              arr[ci] = val;
+            });
+          });
+          for (let i = 0; i < rows.length; i++) rows[i] = rows[i] || [];
+          sheets.push({ name: s.getAttribute("name") || "", rows });
+        }
+        return sheets;
+      }
+      const headNorm = (v) => nfkc(v).replace(/\s+/g, "").toUpperCase();
+      function headerMap(row) {
+        const map = {};
+        (row || []).forEach((cell, i) => {
+          const h = headNorm(cell);
+          if (!h) return;
+          for (const k of Object.keys(TCOLS)) {
+            const col = TCOLS[k];
+            if ([col.label, ...(col.alias || [])].some((a) => headNorm(a) === h)) {
+              if (map[k] == null) map[k] = i;
+              return;
+            }
+          }
+          const mi = matIndexByName(cell);
+          if (mi >= 0 && map["mat" + mi] == null) map["mat" + mi] = i;
+        });
+        return map;
+      }
+      // 見出し（「カット」の列がある行）を探して、行の配列に直す
+      function tableFromRows(rows, sheetName) {
+        const limit = Math.min(rows.length, 30);
+        for (let h = 0; h < limit; h++) {
+          const map = headerMap(rows[h]);
+          if (map.cut == null) continue;
+          const meta = {};
+          for (let i = 0; i < h; i++)
+            (rows[i] || []).forEach((cell, j) => {
+              const s = nfkc(cell);
+              let m = /作品コード\s*[:：]?\s*([A-Za-z0-9]+)/.exec(s);
+              if (m) meta.code = m[1].toUpperCase();
+              else if (/^作品コード$/.test(s.trim()) && rows[i][j + 1] != null) meta.code = nfkc(rows[i][j + 1]).trim().toUpperCase();
+              m = /話数\s*[:：]?\s*(\d+)/.exec(s);
+              if (m) meta.ep = m[1];
+              else if (/^話数$/.test(s.trim()) && rows[i][j + 1] != null) meta.ep = nfkc(rows[i][j + 1]).trim();
+            });
+          const data = [];
+          for (let i = h + 1; i < rows.length; i++) {
+            const r = rows[i] || [];
+            if (!r.some((x) => nfkc(x).trim())) continue;
+            const cutRaw = nfkc(r[map.cut]).trim();
+            if (/^例/.test(cutRaw)) continue;
+            data.push({ line: i + 1, r });
+          }
+          return { map, meta, data, sheetName };
+        }
+        return null;
+      }
+      async function readTableSource(name, buf, text) {
+        if (buf) {
+          const sheets = await readXlsx(buf);
+          for (const s of sheets) {
+            const t = tableFromRows(s.rows, s.name);
+            if (t) return t;
+          }
+          return null;
+        }
+        // タブがあればタブ区切り（スプレッドシートからの貼り付け）、無ければカンマ区切り（CSV）
+        const delim = text.includes("\t") ? "\t" : ",";
+        return tableFromRows(parseDelimited(text.replace(/^﻿/, ""), delim), name);
+      }
+      // 読み込みの計画を作る（写しの上で試し、結果を一覧にする。取り込むときはその写しを使う）
+      function planImport(t) {
+        const work = JSON.parse(JSON.stringify(cuts));
+        const items = [],
+          touched = new Set();
+        let kenyo = 0;
+        const keyOrder = ["subcut", "priority", "r", "retakeDate", "body", "instr", "instrColor", "take", "takeNo", "assignee", "returnDate", "check", "note", "done"];
+        t.data.forEach(({ line, r }) => {
+          const cell = (k) => (t.map[k] == null ? "" : r[t.map[k]]);
+          const str = (k) => {
+            const x = cell(k);
+            return typeof x === "number" ? String(x) : nfkc(x).trim() === "" ? "" : String(x);
+          };
+          const cutNo = cleanCut(nfkc(cell("cut")));
+          const it = { line, cut: cutNo, status: "", notes: [], changes: [] };
+          items.push(it);
+          if (!cutNo) {
+            it.status = "error";
+            it.notes.push("カット番号がありません");
+            return;
+          }
+          const sub = str("subcut") ? cleanCut(str("subcut")) : null;
+          let c = work.filter((x) => x.cut === cutNo);
+          c = (sub != null && c.find((x) => x.subcut === sub)) || c[0];
+          let v,
+            isNew = false;
+          const rStr = str("r");
+          if (!c) {
+            c = {
+              id: newId("c"),
+              cut: cutNo,
+              subcut: "",
+              priority: "",
+              selectedVer: 0,
+              versions: [Object.assign(emptyVer(rStr ? rStr : common().r), { retakeDate: prefs.lastRetakeDate || "" })],
+            };
+            work.push(c);
+            v = c.versions[0];
+            isNew = true;
+            it.status = "new";
+          } else if (rStr) {
+            const n = parseR(rStr);
+            v = vers(c).find((x) => (x.r | 0) === n);
+            if (!v) {
+              v = Object.assign(emptyVer(n), { retakeDate: prefs.lastRetakeDate || "" });
+              vers(c).push(v);
+              it.status = "newVer";
+            }
+          } else v = latestVer(c);
+          it.r = v.r;
+          const oldSub = c.subcut || "";
+          keyOrder.forEach((k) => {
+            if (k === "r") return;
+            const x = cell(k);
+            const empty = typeof x !== "number" && nfkc(x).trim() === "";
+            if (empty || t.map[k] == null) return;
+            let val = x;
+            if ((k === "retakeDate" || k === "returnDate") && typeof x === "number") val = parseDateCell(x) || "";
+            if (k === "takeNo" && !str("take") && !cleanTakeType(v.takeType)) {
+              it.notes.push("テイク番号は撮影の種類と一緒に入れます");
+              return;
+            }
+            const res = TCOLS[k].set(c, v, typeof val === "number" ? String(val) : val);
+            if (res === "changed") it.changes.push(TCOLS[k].label);
+            else if (res !== "same") it.notes.push(res);
+          });
+          // 撮入れ: 1列（「セル・BG」）か、素材ごとの列（●）か。どれも空なら触らない
+          const matCols = Object.keys(t.map).filter((k) => /^mat\d$/.test(k));
+          const matAny = matCols.some((k) => nfkc(cell(k)).trim());
+          if (matAny) {
+            const mats = [],
+              matR = cleanMatR(v.matR);
+            matCols.forEach((k) => {
+              const i = +k.slice(3),
+                s = nfkc(cell(k)).trim();
+              if (!s || parseFlag(s) === false) {
+                matR[i] = "";
+                return;
+              }
+              mats.push(i);
+              const d = /(\d{1,2})/.exec(s);
+              matR[i] = d ? d[1] : "";
+            });
+            const before = JSON.stringify([cleanMats(v.mats), cleanMatR(v.matR)]);
+            v.mats = cleanMats(mats);
+            v.matR = cleanMatR(matR);
+            if (JSON.stringify([v.mats, v.matR]) !== before) it.changes.push("撮入れ");
+          } else if (t.map.mats != null && nfkc(cell("mats")).trim()) {
+            const res = TCOLS.mats.set(c, v, cell("mats"));
+            if (res === "changed") it.changes.push("撮入れ");
+            else if (res !== "same") it.notes.push(res);
+          }
+          if ((c.subcut || "") !== oldSub) kenyo += kenyoOnSubcut(c, oldSub, work, { noRemove: true });
+          if (isNew) kenyo += kenyoOnCutNumber(c, work);
+          if (!it.status) it.status = it.changes.length ? "update" : "same";
+          if (it.notes.length && it.status !== "error") it.warn = true;
+          touched.add(c);
+        });
+        const count = (s) => items.filter((x) => x.status === s).length;
+        return { work, items, kenyo, sum: { new: count("new"), newVer: count("newVer"), update: count("update"), same: count("same"), error: count("error"), warn: items.filter((x) => x.warn).length } };
+      }
+      let importPlan = null;
+      function showImportPlan(t, source) {
+        if (!t) {
+          alert("表の中に「カット」の見出しが見つかりませんでした。AniRetake の読み込み用シートか、書き出したリテイク表を使ってください。");
+          return;
+        }
+        if (!t.data.length) {
+          alert("読み込めるカットの行がありませんでした（「例」の行は読み込みません）。");
+          return;
+        }
+        importPlan = planImport(t);
+        const p = importPlan,
+          cm = common();
+        const st = { new: "新規", newVer: "版を追加", update: "更新", same: "変化なし", error: "エラー" };
+        let warnMeta = "";
+        if ((t.meta.code && t.meta.code !== cm.code) || (t.meta.ep && t.meta.ep !== cm.ep))
+          warnMeta = `<p class="impWarn">表の作品・話数（${escHtml(t.meta.code || "?")} / ${escHtml(t.meta.ep || "?")}）が、開いている話数（${escHtml(cm.code)} / ${escHtml(cm.ep)}）と違います。開いている話数に取り込みます。</p>`;
+        $("importSummary").innerHTML =
+          `<p>${escHtml(source)}${t.sheetName ? `（シート「${escHtml(t.sheetName)}」）` : ""}から ${p.items.length}行を読みました。取り込むと、開いている話数（${escHtml(cm.code)} / ${escHtml(cm.ep)}）が次のように変わります。</p>` +
+          warnMeta +
+          `<div class="impChips"><span class="impChip new">新規 ${p.sum.new}</span><span class="impChip newVer">版を追加 ${p.sum.newVer}</span><span class="impChip update">更新 ${p.sum.update}</span><span class="impChip same">変化なし ${p.sum.same}</span><span class="impChip error">エラー ${p.sum.error}</span>${p.kenyo ? `<span class="impChip kenyo">兼用の自動記入 ${p.kenyo}</span>` : ""}</div>` +
+          `<p class="hint">空欄のセルは、入っている内容を消しません。エラーの行は取り込みません。読み込めない値があった行は、その値だけ取り込みません。</p>`;
+        $("importList").innerHTML =
+          `<table class="impTable"><thead><tr><th>行</th><th>カット</th><th>R</th><th>結果</th><th>内容</th></tr></thead><tbody>` +
+          p.items
+            .map(
+              (it) =>
+                `<tr class="${it.status}${it.warn ? " warn" : ""}"><td>${it.line}</td><td>${escHtml(it.cut || "—")}</td><td>${it.r ? rrLabel(it.r) : ""}</td><td>${st[it.status]}</td><td>${escHtml(
+                  [it.changes.length && it.status !== "new" ? it.changes.join("・") + " を変更" : "", ...it.notes].filter(Boolean).join("／"),
+                )}</td></tr>`,
+            )
+            .join("") +
+          "</tbody></table>";
+        const n = p.sum.new + p.sum.newVer + p.sum.update + (p.kenyo ? 1 : 0);
+        $("importOk").disabled = !n;
+        $("importOk").textContent = n ? "取り込む" : "変わる内容がありません";
+        $("importModal").classList.add("show");
+      }
+      function applyImport() {
+        const p = importPlan;
+        if (!p) return;
+        if (saveBlocked) {
+          alert("保存を止めているため取り込めません。画面上のお知らせを確認してください。");
+          return;
+        }
+        const curId = cuts[selected] && cuts[selected].id;
+        cuts = p.work;
+        const i = cuts.findIndex((c) => c.id === curId);
+        selected = i >= 0 ? i : 0;
+        importPlan = null;
+        $("importModal").classList.remove("show");
+        loadToForm();
+        renderAll();
+        schedule();
+        gridFlash(`取り込みました（新規 ${p.sum.new}・版を追加 ${p.sum.newVer}・更新 ${p.sum.update}${p.kenyo ? `・兼用の自動記入 ${p.kenyo}` : ""}）`);
+        if (!isGridView()) $("save").textContent = `表の取り込み完了：新規 ${p.sum.new}・版 ${p.sum.newVer}・更新 ${p.sum.update}`;
+      }
+      async function importTableFile(f) {
+        if (!f) return;
+        if (f.size > 50 * 1024 * 1024) {
+          alert("ファイルが大きすぎます（50MBまで）。");
+          return;
+        }
+        try {
+          const isX = /\.xlsx$/i.test(f.name);
+          let t;
+          if (isX) t = await readTableSource(f.name, await f.arrayBuffer());
+          else {
+            // Excel の CSV は Shift_JIS のことが多い。UTF-8 で読めなければ Shift_JIS で読む
+            const buf = await f.arrayBuffer();
+            let text;
+            try {
+              text = new TextDecoder("utf-8", { fatal: true }).decode(buf);
+            } catch (e) {
+              text = new TextDecoder("shift_jis").decode(buf);
+            }
+            t = await readTableSource(f.name, null, text);
+          }
+          showImportPlan(t, f.name);
+        } catch (e) {
+          console.error(e);
+          alert(
+            /\.xls$/i.test(f.name)
+              ? "古い Excel 形式（.xls）は読めません。.xlsx か CSV で保存し直してください。"
+              : "表を読めませんでした。xlsx・CSV（カンマ／タブ区切り）のどれかか確認してください。",
+          );
+        }
+      }
+      function initTableIO() {
+        $("tableFile").onchange = (e) => {
+          const f = e.target.files[0];
+          e.target.value = "";
+          importTableFile(f);
+        };
+        $("pasteImportOk").onclick = async () => {
+          const text = $("pasteImportText").value;
+          if (!text.trim()) return;
+          $("pasteModal").classList.remove("show");
+          showImportPlan(await readTableSource("貼り付けた表", null, text), "貼り付けた表");
+          $("pasteImportText").value = "";
+        };
+        $("pasteImportCancel").onclick = () => $("pasteModal").classList.remove("show");
+        $("importOk").onclick = applyImport;
+        $("importCancel").onclick = () => {
+          importPlan = null;
+          $("importModal").classList.remove("show");
+        };
+        document.querySelectorAll("[data-table]").forEach(
+          (b) =>
+            (b.onclick = () => {
+              b.closest("details") && b.closest("details").removeAttribute("open");
+              const a = b.dataset.table;
+              if (a === "importFile") $("tableFile").click();
+              else if (a === "importPaste") {
+                $("pasteModal").classList.add("show");
+                $("pasteImportText").focus();
+              } else exportTable(a);
+            }),
+        );
+      }
+      initGrid();
+      initTableIO();
       initStorage();
     </script>
   </body>
