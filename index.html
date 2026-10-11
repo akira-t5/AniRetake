@@ -8784,10 +8784,11 @@
         for (let i = 0; i < MAT_SLOTS; i++) if (matLabel(i)) labels.push(i);
         const matCols = labels.map((i) => ({ key: "mat" + i, label: matLabel(i), xw: 5, mat: i }));
         const K = (k) => TCOLS[k];
-        if (kind === "list") return ["no", "cut", "subcut", "r", "priority", "retakeDate", "body", "instr", "mats", "take", "note", "done"].map(K);
+        // 列の並びは一覧入力（表を全面）と同じ（v2.0.1〜）
+        if (kind === "list") return ["done", "no", "cut", "subcut", "body", "instr", "note", "retakeDate", "priority", "r", "mats", "take"].map(K);
         if (kind === "check")
-          return [...["no", "cut", "subcut", "r", "priority", "body", "instr"].map(K), ...matCols, ...["take", "assignee", "returnDate", "check", "note", "done"].map(K)];
-        return [...["cut", "subcut", "r", "priority", "retakeDate", "body", "instr", "instrColor"].map(K), ...matCols, ...["take", "takeNo", "assignee", "returnDate", "check", "note", "done"].map(K)];
+          return [...["done", "no", "cut", "subcut", "body", "instr", "note", "priority", "assignee", "r"].map(K), ...matCols, ...["take", "returnDate", "check"].map(K)];
+        return [...["done", "cut", "subcut", "body", "instr", "instrColor", "note", "retakeDate", "priority", "assignee", "r"].map(K), ...matCols, ...["take", "takeNo", "returnDate", "check"].map(K)];
       }
       function tableFileName(kind) {
         const cm = common(),
@@ -8832,8 +8833,15 @@
         }
         const memo = ["assignee", "returnDate", "check"].map((k) => cols.findIndex((c) => c.key === k)).filter((i) => i >= 0);
         if (memo.length && kind === "check") {
-          r3[memo[0]] = { v: "記入欄", s: st.xf({ font: { b: true, sz: 9 }, fill: "FFF3D6", h: "center" }) };
-          merges.push(`${colLetter(memo[0])}3:${colLetter(memo[memo.length - 1])}3`);
+          // 並んでいる記入欄ごとにまとめる
+          memo.sort((a, b) => a - b);
+          memo.forEach((i, j) => {
+            if (j && memo[j - 1] === i - 1) return;
+            let e = i;
+            while (memo.includes(e + 1)) e++;
+            r3[i] = { v: "記入欄", s: st.xf({ font: { b: true, sz: 9 }, fill: "FFF3D6", h: "center" }) };
+            if (e > i) merges.push(`${colLetter(i)}3:${colLetter(e)}3`);
+          });
         }
         if (kind === "template") r3[0] = { v: "必須はカット（カードの書き出しにはリテイク内容も必要）", s: st.xf({ font: { b: true, sz: 8 } }) };
         rows.push({ h: 16, cells: r3 });
@@ -8897,7 +8905,7 @@
             rows,
             merges,
             validations,
-            freeze: { row: H, col: kind === "template" ? 1 : 2 },
+            freeze: { row: H, col: kind === "template" ? 2 : 3 },
             filter: kind === "template" ? "" : `A${H}:${colLetter(n - 1)}${Math.max(H + 1, last)}`,
             printTitle: `${H}:${H}`,
           },
