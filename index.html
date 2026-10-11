@@ -3009,7 +3009,7 @@
         KEY2 = "retake.v8",
         SCHEMA = 10,
         JSON_SCHEMA = 5;
-      const APP_VERSION = "2.0.0";
+      const APP_VERSION = "2.0.1";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -6325,11 +6325,121 @@
         schedule();
         return `retake_draft_${base}_${ymd}_${String(n).padStart(2, "0")}.json`;
       }
+      // ---------- 大きな JSON（画像入り）の読み書き（v2.0.1〜） ----------
+      // JSON 全体を1本の文字列にすると、ブラウザの文字列の上限（Chrome で約512MB）で読み書きできなくなる。
+      // 画像の data URL だけを別に扱い、残りの骨組みだけを1本の文字列にする
+      const JSON_FILE_MAX = 4 * 1024 * 1024 * 1024,
+        JSON_SKELETON_MAX = 300 * 1024 * 1024,
+        JSON_IMG_MIN = 256;
+      function jsonTag() {
+        return "\u0000aniretake-" + Math.random().toString(36).slice(2, 10) + ":";
+      }
+      // 書き出し: 画像を目印に置き換えて骨組みを文字列にし、目印の位置に画像を差し込んで Blob にする
+      function jsonBlob(doc, imgs, tag) {
+        const parts = [],
+          re = new RegExp('"' + JSON.stringify(tag).slice(1, -1).replace(/[\\^$.*+?()[\]{}|]/g, "\\$&") + '(\\d+)"', "g"),
+          text = JSON.stringify(doc, null, 2);
+        let last = 0,
+          m;
+        while ((m = re.exec(text))) {
+          parts.push(text.slice(last, m.index), JSON.stringify(imgs[m[1] | 0] || ""));
+          last = m.index + m[0].length;
+        }
+        parts.push(text.slice(last));
+        return new Blob(parts, { type: "application/json" });
+      }
+      // 読み込み: ファイルを少しずつ見て、配列の中の "data:…" の文字列（画像）の位置だけを記録する。
+      // 骨組みだけを JSON として読み、画像はあとからファイルの該当部分を1枚ずつ読んで戻す
+      async function readJsonFile(f, onProgress) {
+        const CH = 16 * 1024 * 1024,
+          PAT = [0x22, 0x64, 0x61, 0x74, 0x61, 0x3a], // "data:
+          spans = [];
+        let prevNW = 0, // 直前の空白以外のバイト（文字列の外の区切りかどうかを見る）
+          m = 0,
+          q = -1,
+          img = -1;
+        for (let base = 0; base < f.size; base += CH) {
+          const u = new Uint8Array(await f.slice(base, Math.min(f.size, base + CH)).arrayBuffer());
+          for (let j = 0; j < u.length; j++) {
+            const b = u[j];
+            if (img >= 0) {
+              if (b === 0x22) {
+                const end = base + j + 1;
+                if (end - img >= JSON_IMG_MIN) spans.push([img, end]);
+                img = -1;
+                prevNW = b;
+              } else if (b < 0x20 || b > 0x7e || b === 0x5c) {
+                // 画像ではない（エスケープや日本語を含む）。ふつうの文字列として骨組みに残す
+                img = -1;
+                prevNW = b;
+              }
+              continue;
+            }
+            if (m > 0) {
+              if (b === PAT[m]) {
+                if (++m === PAT.length) {
+                  img = q;
+                  m = 0;
+                }
+                continue;
+              }
+              m = 0;
+              prevNW = 0x22;
+            }
+            if (b === 0x22 && (prevNW === 0x5b || prevNW === 0x2c)) {
+              m = 1;
+              q = base + j;
+              continue;
+            }
+            if (b !== 0x20 && b !== 0x0a && b !== 0x0d && b !== 0x09) prevNW = b;
+          }
+          if (onProgress) onProgress(Math.min(f.size, base + CH) / f.size);
+        }
+        const tag = jsonTag(),
+          parts = [];
+        let last = 0;
+        spans.forEach((sp, k) => {
+          parts.push(f.slice(last, sp[0]), JSON.stringify(tag + k));
+          last = sp[1];
+        });
+        parts.push(f.slice(last));
+        const skel = new Blob(parts);
+        if (skel.size > JSON_SKELETON_MAX) {
+          const err = new Error("skeleton too large");
+          err.tooBig = true;
+          throw err;
+        }
+        const d = JSON.parse(await skel.text());
+        const take = async (v) => {
+          if (typeof v !== "string" || !v.startsWith(tag)) return v;
+          const sp = spans[v.slice(tag.length) | 0];
+          return sp ? await f.slice(sp[0] + 1, sp[1] - 1).text() : "";
+        };
+        const fill = async (o) => {
+          if (Array.isArray(o)) {
+            for (let i = 0; i < o.length; i++)
+              if (typeof o[i] === "string") o[i] = await take(o[i]);
+              else if (o[i] && typeof o[i] === "object") await fill(o[i]);
+            return;
+          }
+          for (const k of Object.keys(o)) {
+            const v = o[k],
+              nk = await take(k);
+            if (nk !== k) delete o[k];
+            o[nk] = typeof v === "string" ? await take(v) : v;
+            if (v && typeof v === "object") await fill(v);
+          }
+        };
+        if (spans.length && d && typeof d === "object") await fill(d);
+        return d;
+      }
       $("json").onclick = async () => {
         await waitImgs();
-        download(
+        const tag = jsonTag(),
+          imgs = [];
+        downloadBlob(
           jsonFileName(),
-          JSON.stringify(
+          jsonBlob(
             {
               schemaVersion: JSON_SCHEMA,
               common: { code: $("code").value, ep: $("ep").value, r: $("r").value },
@@ -6354,45 +6464,44 @@
                   takeType: cleanTakeType(v.takeType),
                   takeNo: cleanTakeNo(v.takeNo),
                   ...extraOf(v),
-                  images: (v.images || []).map(imgSrc).filter(Boolean),
+                  images: (v.images || [])
+                    .map(imgSrc)
+                    .filter(Boolean)
+                    .map((src) => tag + (imgs.push(src) - 1)),
                 })),
               })),
               selected,
               prefs,
             },
-            null,
-            2,
+            imgs,
+            tag,
           ),
-          "application/json",
         );
       };
       $("loadBtn").onclick = () => $("load").click();
-      $("load").onchange = (e) => {
+      $("load").onchange = async (e) => {
         let f = e.target.files[0];
         if (!f) return;
-        // 極端に大きいファイルは読まない（タブが固まらないように）
-        if (f.size > 300 * 1024 * 1024) {
-          alert("ファイルが大きすぎます（300MBまで）。AniRetakeの「JSON保存」で出力したファイルか確認してください。");
+        // 極端に大きいファイルは読まない（画像を除いた部分は JSON_SKELETON_MAX まで）
+        if (f.size > JSON_FILE_MAX) {
+          alert("ファイルが大きすぎます（4GBまで）。AniRetakeの「JSON保存」で出力したファイルか確認してください。");
           e.target.value = "";
           return;
         }
-        let r = new FileReader();
-        r.onload = async () => {
-          try {
-            await importJson(e);
-          } catch (err) {
-            console.error(err);
-            alert("JSONの読み込み中に問題が起きました。内容が想定と違う可能性があります。画面の内容を確かめ、必要なら再読み込みしてからもう一度お試しください。");
-            e.target.value = "";
-          }
-        };
         const importJson = async (e) => {
           let d;
+          const saveMsg = $("save").textContent;
           try {
-            d = JSON.parse(r.result);
+            d = await readJsonFile(f, (r) => {
+              $("save").textContent = `JSONを読み込み中… ${Math.floor(r * 100)}%`;
+            });
           } catch (err) {
+            console.error(err);
+            $("save").textContent = saveMsg;
             alert(
-              "JSONを読めませんでした。AniRetakeの「JSON保存」で出力したファイルか確認してください。",
+              err && err.tooBig
+                ? "JSONの画像以外の部分が大きすぎて読み込めません。AniRetakeの「JSON保存」で出力したファイルか確認してください。"
+                : "JSONを読めませんでした。AniRetakeの「JSON保存」で出力したファイルか確認してください。",
             );
             e.target.value = "";
             return;
@@ -6508,7 +6617,13 @@
           })();
           e.target.value = "";
         };
-        r.readAsText(f);
+        try {
+          await importJson(e);
+        } catch (err) {
+          console.error(err);
+          alert("JSONの読み込み中に問題が起きました。内容が想定と違う可能性があります。画面の内容を確かめ、必要なら再読み込みしてからもう一度お試しください。");
+          e.target.value = "";
+        }
       };
       $("reset").onclick = async () => {
         if (saveBlocked === "conflict") {
