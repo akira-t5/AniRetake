@@ -97,11 +97,12 @@ function makeBook() {
   return ss;
 }
 
-export function loadGas(htmlPath, ss) {
+// key: 合言葉（null ならスクリプトの「ここに合言葉」のまま＝未設定）
+export function loadGas(htmlPath, ss, key = MOCK_KEY) {
   const html = fs.readFileSync(htmlPath, "utf8");
   const m = /<script type="text\/plain" id="gasSource">([\s\S]*?)<\/script>/.exec(html);
   if (!m) throw new Error("gasSource が見つかりません");
-  const src = m[1].replace('const KEY = "ここに合言葉";', `const KEY = "${MOCK_KEY}";`);
+  const src = key == null ? m[1] : m[1].replace('const KEY = "ここに合言葉";', `const KEY = ${JSON.stringify(key)};`);
   const ctx = {
     SpreadsheetApp: { getActive: () => ss },
     ContentService: {
@@ -122,9 +123,9 @@ export function loadGas(htmlPath, ss) {
   return ctx.__gas;
 }
 
-export function startServer(htmlPath, port = 0) {
+export function startServer(htmlPath, port = 0, key = MOCK_KEY) {
   const ss = makeBook();
-  const gas = loadGas(htmlPath, ss);
+  const gas = loadGas(htmlPath, ss, key);
   const stats = { get: 0, post: 0 };
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, "http://localhost");

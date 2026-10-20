@@ -9524,6 +9524,20 @@
       const SHEET_FIELDS = ["done", "cut", "subcut", "body", "instr", "instrColor", "note", "retakeDate", "priority", "assignee", "r", "mats", "take", "returnDate", "check"];
       const sheetLabel = (k) => TCOLS[k].label;
       const sheetNorm = (x) => String(x == null ? "" : x).replace(/\r\n?/g, "\n");
+      // 合言葉は前後の空白と全角／半角の違いを無視する（スクリプト側も同じにそろえて比べる）
+      const sheetNormKey = (k) => String(k == null ? "" : k).normalize("NFKC").trim();
+      // 通信のエラーを、利用者が直せる言い方にする
+      function sheetErrText(e) {
+        return (
+          {
+            nokey: "スクリプトの KEY がまだ「ここに合言葉」のままです。合言葉に書き換えて保存し、「デプロイ」→「デプロイを管理」→ 編集 →「新バージョン」で更新してください",
+            key: "合言葉が違います。環境設定の合言葉と、スクリプトの KEY を見比べてください。スクリプトを直したあとは「デプロイを管理」→ 編集 →「新バージョン」で更新が必要です",
+            foreign: "AniRetake 共有用のスクリプトではありません（通信テスト用の URL かもしれません）。共有用のシートで「スクリプトをコピー」したものをデプロイし、その URL を入れてください",
+            bad: "応答を読めません。URL と、デプロイの「アクセスできるユーザー」が「全員」になっているか確認してください",
+            net: "つながりませんでした（インターネットの接続と URL を確認してください）",
+          }[e.kind] || "シートでエラーが出ました（" + e.message + "）"
+        );
+      }
       // 設定（URL・合言葉・名前・共有している話数）は JSON 保存に入れない（他の人に渡したときに合言葉が付いていかないように）
       function sheetCfg() {
         let c = null;
@@ -9730,11 +9744,11 @@
             res = await fetch(cfg.url, {
               method: "POST",
               headers: { "Content-Type": "text/plain;charset=utf-8" },
-              body: JSON.stringify(Object.assign({ key: cfg.key, user: cfg.user }, body)),
+              body: JSON.stringify(Object.assign({ key: sheetNormKey(cfg.key), user: cfg.user }, body)),
               signal: ctl && ctl.signal,
             });
           else {
-            const q = new URLSearchParams(Object.assign({ key: cfg.key }, params));
+            const q = new URLSearchParams(Object.assign({ key: sheetNormKey(cfg.key) }, params));
             res = await fetch(cfg.url + (cfg.url.includes("?") ? "&" : "?") + q.toString(), { signal: ctl && ctl.signal });
           }
           const text = await res.text();
@@ -9744,7 +9758,10 @@
           } catch (e) {
             throw Object.assign(new Error("応答を読めません"), { kind: "bad" });
           }
-          if (!d.ok) throw Object.assign(new Error(d.error || "error"), { kind: d.error === "key" ? "key" : "server" });
+          // AniRetake 用ではないスクリプト（通信テスト用の probe.gs など）は app が無い
+          // 前の版のスクリプトは app を返さないので、エラーの種類で見分ける
+          const known = ["key", "nokey", "busy", "json", "tab", "notTab", "op"];
+          if (!d.ok) throw Object.assign(new Error(d.error || "error"), { kind: d.app !== "AniRetake" && !known.includes(d.error) ? "foreign" : d.error === "key" || d.error === "nokey" ? d.error : "server" });
           return d;
         } catch (e) {
           if (!e.kind) e.kind = "net";
@@ -9935,7 +9952,7 @@
           sheetShow("ok");
         } catch (e) {
           console.error(e);
-          sheetShow("error", e.kind === "key" ? "合言葉が違います（環境設定で確認してください）" : e.kind === "net" ? "つながりません" : e.kind === "bad" ? "シートの応答を読めません（URL を確認してください）" : "シートでエラーが出ました（" + e.message + "）");
+          sheetShow("error", e.kind === "net" ? "つながりません" : e.kind === "key" || e.kind === "nokey" ? "合言葉を確認してください" : e.kind === "foreign" ? "URL を確認してください" : "エラー", sheetErrText(e));
         } finally {
           sheetBusy = false;
           if (sheetAgain) {
@@ -9974,14 +9991,14 @@
         });
         return n;
       }
-      function sheetShow(state, msg) {
+      function sheetShow(state, msg, detail) {
         const el = $("sheetState");
         if (!el) return;
         const cfg = sheetCfg(),
           on = !!(cfg.url && cfg.eps[activeEp]);
         el.hidden = !on;
         if (!on) return;
-        if (state) sheetLast = { state, at: state === "ok" ? Date.now() : sheetLast.at, msg: msg || "" };
+        if (state) sheetLast = { state, at: state === "ok" ? Date.now() : sheetLast.at, msg: msg || "", detail: detail || "" };
         const s = sheetLast,
           nc = sheetSt && sheetSt.ep === activeEp ? sheetSt.conflicts.length : 0,
           np = sheetPending();
@@ -10002,7 +10019,7 @@
         } else t = s.at ? `共有：最新 ${hm(s.at)}` : "共有：待機中";
         el.textContent = t;
         el.dataset.state = kind;
-        el.title = nc ? "押すと、どちらの値を残すか選べます" : "押すと今すぐ同期します" + (s.msg && s.state === "error" ? `\n${s.msg}` : "");
+        el.title = nc ? "押すと、どちらの値を残すか選べます" : "押すと今すぐ同期します" + (s.state === "error" ? `\n${s.detail || s.msg}` : "");
       }
 
       // ---------- 衝突の選択 ----------
@@ -10067,7 +10084,7 @@
         const cfg = sheetCfg();
         if (!$("settingsModal").classList.contains("show")) return cfg;
         cfg.url = $("sheetUrl").value.trim();
-        cfg.key = $("sheetKey").value;
+        cfg.key = sheetNormKey($("sheetKey").value);
         cfg.user = $("sheetUser").value.trim().slice(0, 30);
         sheetSaveCfg(cfg);
         return cfg;
@@ -10082,10 +10099,11 @@
         out.textContent = "接続中…";
         try {
           const d = await sheetFetch(cfg, { op: "ping" });
+          if (d.app !== "AniRetake" && d.v !== 1) throw Object.assign(new Error("foreign"), { kind: "foreign" });
           out.textContent = `つながりました：スプレッドシート「${d.name}」`;
           return true;
         } catch (e) {
-          out.textContent = e.kind === "key" ? "合言葉が違います（スクリプトの KEY と同じにしてください）" : e.kind === "bad" ? "応答を読めません。デプロイの「アクセスできるユーザー」が「全員」か確認してください" : "つながりませんでした（" + e.message + "）";
+          out.textContent = sheetErrText(e);
           return false;
         }
       }
@@ -10139,7 +10157,7 @@
         try {
           tabs = (await sheetFetch(cfg, { op: "tabs" })).tabs || [];
         } catch (e) {
-          return alert(e.kind === "key" ? "合言葉が違います。" : "共有シートにつながりませんでした。");
+          return alert(sheetErrText(e));
         }
         const box = $("sheetTabList");
         box.innerHTML = tabs.length ? "" : '<p class="hint">共有しているタブがまだありません。</p>';
@@ -10252,8 +10270,12 @@ const ID_V = "ID(版)",
 function out_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
-function okKey_(k) {
-  return KEY !== "ここに合言葉" && String(k || "") === KEY;
+// 合言葉を確かめる。前後の空白と全角／半角の違いは無視する。問題が無ければ ""
+const normKey_ = (k) => String(k == null ? "" : k).normalize("NFKC").trim();
+function keyErr_(k) {
+  const mine = normKey_(KEY);
+  if (!mine || mine === "ここに合言葉") return "nokey";
+  return normKey_(k) === mine ? "" : "key";
 }
 // AniRetake が作ったタブだけを扱う（2行目の左端が ID(版)）
 function isTab_(sh) {
@@ -10274,9 +10296,10 @@ function hash_(d) {
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  if (!okKey_(p.key)) return out_({ ok: false, error: "key" });
+  const ke = keyErr_(p.key);
+  if (ke) return out_({ ok: false, error: ke, app: "AniRetake" });
   const ss = SpreadsheetApp.getActive();
-  if (p.op === "ping") return out_({ ok: true, name: ss.getName(), v: 1 });
+  if (p.op === "ping") return out_({ ok: true, app: "AniRetake", name: ss.getName(), v: 1 });
   if (p.op === "tabs")
     return out_({
       ok: true,
@@ -10304,7 +10327,8 @@ function doPost(e) {
   } catch (err) {
     return out_({ ok: false, error: "json" });
   }
-  if (!okKey_(b.key)) return out_({ ok: false, error: "key" });
+  const ke = keyErr_(b.key);
+  if (ke) return out_({ ok: false, error: ke, app: "AniRetake" });
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(20000)) return out_({ ok: false, error: "busy" });
   try {

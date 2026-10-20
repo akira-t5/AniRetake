@@ -192,6 +192,35 @@ try {
   ok(rowOfCut("001") && tab().cells.every((r) => !r.includes("共有をやめたあとの変更")), "シートは変わらない");
   ok(await A.page.evaluate(() => $("sheetState").hidden), "上部の「共有：」の札が消える");
 
+  console.log("12. 接続テストの表示（合言葉の確認）");
+  const ping = (u, url, key) =>
+    u.page.evaluate(
+      async ([url, key]) => {
+        const c = sheetCfg();
+        c.url = url;
+        c.key = key;
+        sheetSaveCfg(c);
+        await sheetPing();
+        return $("sheetTestOut").textContent;
+      },
+      [url, key],
+    );
+  ok((await ping(A, URL_, "  ｔｅｓｔ－ｋｅｙ ")).startsWith("つながりました"), "前後の空白・全角の合言葉でも通る");
+  ok((await ping(A, URL_, "ちがう")).startsWith("合言葉が違います"), "違う合言葉 →「合言葉が違います」");
+  const unset = await startServer(htmlPath, 0, null);
+  ok((await ping(A, `http://localhost:${unset.port}/exec`, "なんでも")).includes("「ここに合言葉」のまま"), "KEY が未設定 →「ここに合言葉のまま」");
+  unset.server.close();
+  const http = await import("node:http");
+  const probe = http.createServer((q, r) => {
+    r.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
+    r.end(JSON.stringify(q.url.includes("key=test-aikotoba") ? { ok: true, method: "GET", sheet: "テスト" } : { ok: false, error: "合言葉が違います" }));
+  });
+  await new Promise((r) => probe.listen(0, r));
+  const pu = `http://localhost:${probe.address().port}/exec`;
+  ok((await ping(A, pu, "test-aikotoba")).includes("共有用のスクリプトではありません"), "通信テスト用の URL（合言葉が合う）→ 別のスクリプトと出る");
+  ok((await ping(A, pu, "ちがう")).includes("共有用のスクリプトではありません"), "通信テスト用の URL（合言葉が違う）→ 別のスクリプトと出る");
+  probe.close();
+
   ok(A.errs.length === 0 && B.errs.length === 0, "画面のエラーなし " + JSON.stringify([...A.errs, ...B.errs]));
 } catch (e) {
   console.error(e);
