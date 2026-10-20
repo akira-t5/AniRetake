@@ -9520,6 +9520,8 @@
         SHEET_WHO = "更新者",
         SHEET_WHEN = "更新日時",
         SHEET_DELAY = 3000,
+        SHEET_GAS_VER = 2,
+        SHEET_OLD_MSG = "共有シートのスクリプトが古い版です（= などで始まる文が数式になります）。環境設定の「スクリプトをコピー」で Apps Script に貼り直し、「デプロイを管理」→ 編集 →「新バージョン」で更新してください",
         SHEET_POLL = 30000;
       const SHEET_FIELDS = ["done", "cut", "subcut", "body", "instr", "instrColor", "note", "retakeDate", "priority", "assignee", "r", "mats", "take", "returnDate", "check"];
       const sheetLabel = (k) => TCOLS[k].label;
@@ -9577,8 +9579,9 @@
       // "same"／"changed"／読めないときはその理由の文
       function sheetSet(k, c, v, x) {
         x = sheetNorm(x);
-        if (k === "cut") return setStr(c, "cut", cleanCut(x));
-        if (k === "subcut") return setStr(c, "subcut", cleanCut(x));
+        // シートで 9 と打っても、アプリで入力したときと同じく 009 にそろえる（次の同期でシートにも送る）
+        if (k === "cut") return setStr(c, "cut", padCutNo(cleanCut(x)));
+        if (k === "subcut") return setStr(c, "subcut", padCutNo(cleanCut(x)));
         return TCOLS[k].set(c, v, x);
       }
       // 何も入っていない版（＋追加した直後など）は送らない
@@ -9834,6 +9837,7 @@
           else if (g.missing) parsed = { R: {}, manual: [] };
           else parsed = sheetParse(g);
           st.h = g.missing ? "" : g.h || "";
+          if (!g.missing && (g.v || 1) < SHEET_GAS_VER) sheetNotice([SHEET_OLD_MSG]);
           st.remote = parsed;
           if (g.url) st.url = g.url;
           const skip = sheetSkip(),
@@ -10100,7 +10104,7 @@
         try {
           const d = await sheetFetch(cfg, { op: "ping" });
           if (d.app !== "AniRetake" && d.v !== 1) throw Object.assign(new Error("foreign"), { kind: "foreign" });
-          out.textContent = `つながりました：スプレッドシート「${d.name}」`;
+          out.textContent = `つながりました：スプレッドシート「${d.name}」` + ((d.v || 1) < SHEET_GAS_VER ? `。${SHEET_OLD_MSG}` : "");
           return true;
         } catch (e) {
           out.textContent = sheetErrText(e);
@@ -10256,7 +10260,7 @@
       });
     </script>
     <script type="text/plain" id="gasSource">
-// AniRetake 共有シート用スクリプト（v1）
+// AniRetake 共有シート用スクリプト（v2）
 // 使い方：AniRetake の環境設定（⚙）→「スプレッドシート共有」の説明を見てください。
 // 下の KEY を、メンバーと決めた合言葉に書き換えてから「デプロイ」してください。
 const KEY = "ここに合言葉";
@@ -10281,11 +10285,25 @@ function keyErr_(k) {
 function isTab_(sh) {
   return sh.getRange(HEAD_ROW, 1).getDisplayValue() === ID_V;
 }
+const VER = 2;
+// 書き込む文字: = + - ' で始まると数式などとして扱われるので、前に ' を付けて文字として入れる（' は画面に出ない）
+const txt_ = (v) => {
+  const s = String(v == null ? "" : v);
+  return /^[=+\-']/.test(s) ? "'" + s : s;
+};
+// 読むときは、数式になってしまったセル（手で =… と打った・前の版で書いた）を、エラー表示ではなく元の文として返す
 function read_(sh) {
   const lr = sh.getLastRow(),
     lc = sh.getLastColumn();
   if (lr < HEAD_ROW || lc < 1) return { head: [], rows: [] };
-  const vals = sh.getRange(HEAD_ROW, 1, lr - HEAD_ROW + 1, lc).getDisplayValues();
+  const rg = sh.getRange(HEAD_ROW, 1, lr - HEAD_ROW + 1, lc),
+    vals = rg.getDisplayValues(),
+    fs = rg.getFormulas();
+  vals.forEach((r, i) =>
+    r.forEach((x, j) => {
+      if (fs[i] && fs[i][j]) r[j] = fs[i][j];
+    }),
+  );
   return { head: vals[0], rows: vals.slice(1) };
 }
 function hash_(d) {
@@ -10299,7 +10317,7 @@ function doGet(e) {
   const ke = keyErr_(p.key);
   if (ke) return out_({ ok: false, error: ke, app: "AniRetake" });
   const ss = SpreadsheetApp.getActive();
-  if (p.op === "ping") return out_({ ok: true, app: "AniRetake", name: ss.getName(), v: 1 });
+  if (p.op === "ping") return out_({ ok: true, app: "AniRetake", name: ss.getName(), v: VER });
   if (p.op === "tabs")
     return out_({
       ok: true,
@@ -10314,8 +10332,8 @@ function doGet(e) {
     if (!isTab_(sh)) return out_({ ok: false, error: "notTab" });
     const d = read_(sh),
       h = hash_(d);
-    if (p.h && p.h === h) return out_({ ok: true, same: true, h: h });
-    return out_({ ok: true, head: d.head, rows: d.rows, h: h, url: ss.getUrl() + "#gid=" + sh.getSheetId() });
+    if (p.h && p.h === h) return out_({ ok: true, same: true, h: h, v: VER });
+    return out_({ ok: true, head: d.head, rows: d.rows, h: h, v: VER, url: ss.getUrl() + "#gid=" + sh.getSheetId() });
   }
   return out_({ ok: false, error: "op" });
 }
@@ -10371,7 +10389,7 @@ function doPost(e) {
       who = String(b.user || "");
     const cur = (ri, h) => (col[h] == null || d.rows[ri][col[h]] == null ? "" : String(d.rows[ri][col[h]]));
     const put = (ri, h, v) => {
-      sh.getRange(HEAD_ROW + 1 + ri, col[h] + 1).setNumberFormat("@").setValue(v);
+      sh.getRange(HEAD_ROW + 1 + ri, col[h] + 1).setNumberFormat("@").setValue(txt_(v));
       while (d.rows[ri].length <= col[h]) d.rows[ri].push("");
       d.rows[ri][col[h]] = v;
     };
@@ -10422,7 +10440,7 @@ function doPost(e) {
     if (adds.length) {
       const rg = sh.getRange(sh.getLastRow() + 1, 1, adds.length, head.length);
       rg.setNumberFormat("@");
-      rg.setValues(adds);
+      rg.setValues(adds.map((r) => r.map(txt_)));
       sh.getRange(rg.getRow(), 1, adds.length, 2).setFontColor("#9a9893");
     }
     dels

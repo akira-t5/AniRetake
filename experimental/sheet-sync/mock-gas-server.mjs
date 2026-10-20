@@ -1,6 +1,8 @@
 // 共有シート（Google Apps Script）の模擬サーバー（開発用）
 // index.html に埋め込んだ Apps Script（id="gasSource"）を、そのまま Node.js の中で動かす。
 // SpreadsheetApp などの Google の機能は、メモリ上の表でまねる。
+// 本物の Google シートと同じく、= + -（数値を除く）で始まる値は数式として入り（表示は #ERROR!）、
+// ' で始まる値は ' を除いた文字として入る（2026-10 の実機の試用で確認した動き）。
 // 使い方: node experimental/sheet-sync/mock-gas-server.mjs [ポート番号]
 //   ウェブアプリの URL: http://localhost:ポート/exec   合言葉: test-key
 //   /admin/dump?tab=…  …タブの中身を見る
@@ -19,11 +21,13 @@ function makeBook() {
   const sheets = [];
   let nextId = 1;
   function makeSheet(name) {
-    const cells = []; // [行][列]（0から）
+    const cells = [], // 表示される値 [行][列]（0から）
+      forms = []; // 数式（数式でなければ空）
     const sh = {
       name,
       id: nextId++,
       cells,
+      forms,
       getName: () => name,
       getSheetId: () => sh.id,
       getLastRow: () => {
@@ -45,25 +49,39 @@ function makeBook() {
       getMaxColumns: () => Math.max(26, ...cells.map((r) => (r || []).length)),
       setFrozenRows() {},
       setColumnWidth() {},
-      deleteRow: (r) => cells.splice(r - 1, 1),
+      deleteRow: (r) => {
+        cells.splice(r - 1, 1);
+        forms.splice(r - 1, 1);
+      },
       getRange(row, col, nr = 1, nc = 1) {
+        const grid = (t) => {
+          const out = [];
+          for (let r = 0; r < nr; r++) {
+            const line = [];
+            for (let c = 0; c < nc; c++) line.push(String((t[row - 1 + r] || [])[col - 1 + c] ?? ""));
+            out.push(line);
+          }
+          return out;
+        };
         const rg = {
           getRow: () => row,
           getDisplayValue: () => String((cells[row - 1] || [])[col - 1] ?? ""),
-          getDisplayValues: () => {
-            const out = [];
-            for (let r = 0; r < nr; r++) {
-              const line = [];
-              for (let c = 0; c < nc; c++) line.push(String((cells[row - 1 + r] || [])[col - 1 + c] ?? ""));
-              out.push(line);
-            }
-            return out;
-          },
+          getDisplayValues: () => grid(cells),
+          getFormulas: () => grid(forms),
           setValue(v) {
-            while (cells.length < row) cells.push([]);
-            const line = cells[row - 1];
-            while (line.length < col) line.push("");
-            line[col - 1] = v == null ? "" : String(v);
+            let s = v == null ? "" : String(v),
+              f = "";
+            if (s.startsWith("'")) s = s.slice(1);
+            else if (/^[=+\-]/.test(s) && !/^[+-]?\d+(\.\d+)?$/.test(s)) {
+              f = s.startsWith("=") ? s : "=" + s;
+              s = "#ERROR!";
+            }
+            [cells, forms].forEach((t, i) => {
+              while (t.length < row) t.push([]);
+              const line = t[row - 1];
+              while (line.length < col) line.push("");
+              line[col - 1] = i ? f : s;
+            });
             return rg;
           },
           setValues(vals) {

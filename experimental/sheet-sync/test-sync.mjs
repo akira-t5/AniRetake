@@ -63,8 +63,8 @@ try {
     $("code").value = "TST";
     $("ep").value = "01";
     const mk = (cut, body, extra) => ({ id: newId("c"), cut, subcut: "", priority: "", selectedVer: 0, versions: [Object.assign(emptyVer(1), { body }, extra || {})] });
-    cuts = [mk("001", "口パクずれ"), mk("002", "揺れが強い", { instr: "半分に", done: true }), mk("003", "=1+1 で始まる文"), mk("004", "兼用のテスト")];
-    cuts[0].versions.push(Object.assign(emptyVer(2), { body: "2回目" }));
+    cuts = [mk("001", "口パクずれ"), mk("002", "揺れが強い", { instr: "半分に", done: true }), mk("003", "=1+1 で始まる文"), mk("004", "兼用のテスト", { instr: "+プラスで始まる", note: "'アポストロフィで始まる" })];
+    cuts[0].versions.push(Object.assign(emptyVer(2), { body: "2回目", note: "-マイナスで始まる" }));
     selected = 0;
     loadToForm();
     renderAll();
@@ -75,7 +75,10 @@ try {
   ok(tab() && tab().cells.length === 2 + 5, "シートに5行（4カット・001は2版）できた");
   ok(rowOfCut("002")[head().indexOf("済")] === "✓" && rowOfCut("002")[head().indexOf("修正内容")] === "半分に", "済・修正内容も書かれた");
   ok(rowOfCut("002")[head().indexOf("更新者")] === "Aさん", "更新者が入った");
-  ok(rowOfCut("003")[head().indexOf("リテイク内容")] === "=1+1 で始まる文", "= で始まる文も文字のまま");
+  ok(rowOfCut("003")[head().indexOf("リテイク内容")] === "=1+1 で始まる文", "= で始まる文も文字のまま（数式にならない）");
+  ok(rowOfCut("004")[head().indexOf("修正内容")] === "+プラスで始まる" && rowOfCut("004")[head().indexOf("備考")] === "'アポストロフィで始まる", "+ ・ ' で始まる文も文字のまま");
+  ok(tab().cells.some((r) => r[head().indexOf("備考")] === "-マイナスで始まる"), "- で始まる文も文字のまま");
+  ok(tab().forms.every((r) => r.every((f) => !f)), "シートに数式のセルが1つもない");
 
   console.log("2. B が共有シートから話数を開く");
   const B = await openUser("Bさん");
@@ -84,6 +87,7 @@ try {
   const b1 = await local(B);
   ok(b1.map((c) => c.cut).join(",") === "001,002,003,004", "B に4カットが入った（空のカットは外れた）");
   ok(b1[0].vers.length === 2 && b1[1].vers[0].instr === "半分に" && b1[1].vers[0].done, "版・修正内容・済も同じ");
+  ok(b1[2].vers[0].body === "=1+1 で始まる文" && b1[3].vers[0].instr === "+プラスで始まる" && b1[3].vers[0].note === "'アポストロフィで始まる" && b1[0].vers.some((v) => v.note === "-マイナスで始まる"), "= + - ' で始まる文が B にも元のまま届く");
   ok(await B.page.evaluate(() => [common().code, common().ep].join("/")) === "TST/01", "B の作品コード・話数が TST/01");
   await cycle(B);
   ok(tab().cells.length === 7, "B が開いても行は増えない");
@@ -140,16 +144,23 @@ try {
   const ri = tab().cells.indexOf(rowOfCut("002"));
   await fetch(`http://localhost:${port}/admin/set?tab=TST_01&row=${ri + 1}&col=${head().indexOf("備考") + 1}&v=${encodeURIComponent("シートで直した")}`);
   const line = head().map((h) => ({ カット: "10", リテイク内容: "シートで足した行", R: "R-01" })[h] || "");
+  // シートで手で =… と打つと数式になる（表示は #ERROR!）。アプリには元の文で届くこと
+  const ri3 = tab().cells.indexOf(rowOfCut("003"));
+  await fetch(`http://localhost:${port}/admin/set?tab=TST_01&row=${ri3 + 1}&col=${head().indexOf("備考") + 1}&v=${encodeURIComponent("=手で打った式")}`);
   await fetch(`http://localhost:${port}/admin/append?tab=TST_01`, { method: "POST", body: JSON.stringify(line) });
   await cycle(A);
   await cycle(B);
   ok((await findCut(A, "002")).vers[0].note === "シートで直した" && (await findCut(B, "002")).vers[0].note === "シートで直した", "シートで直した備考が A・B に入った");
-  const a10 = await findCut(A, "10"),
-    b10 = await findCut(B, "10");
+  ok((await findCut(A, "003")).vers[0].note === "=手で打った式" && (await findCut(B, "003")).vers[0].note === "=手で打った式", "シートで手で打った =… が #ERROR! ではなく元の文で届く");
+  await cycle(A);
+  await cycle(B);
+  const a10 = await findCut(A, "010"),
+    b10 = await findCut(B, "010");
   ok(!!a10 && !!b10 && a10.vers[0].body === "シートで足した行", "シートで足した行が A・B に1つずつ入った");
-  ok((await local(A)).filter((c) => c.cut === "10").length === 1 && (await local(B)).filter((c) => c.cut === "10").length === 1, "足した行が重複しない");
-  const r10 = rowOfCut("10");
-  ok(!!r10 && !!r10[0] && tab().cells.filter((r) => r[head().indexOf("カット")] === "10").length === 1, "シートの足した行に ID が書き戻された（行は1つのまま）");
+  ok(!!a10 && !!b10, "シートで 10 と打った行が、A・B では 010 にそろう");
+  ok((await local(A)).filter((c) => /^0*10$/.test(c.cut)).length === 1 && (await local(B)).filter((c) => /^0*10$/.test(c.cut)).length === 1, "足した行が重複しない");
+  const r10 = rowOfCut("010");
+  ok(!!r10 && !!r10[0] && tab().cells.filter((r) => /^0*10$/.test(r[head().indexOf("カット")])).length === 1, "シートの足した行に ID が書き戻され、カット番号も 010 にそろう（行は1つのまま）");
 
   console.log("8. オフラインで直す → つながったら送られる");
   await A.ctx.setOffline(true);
@@ -220,6 +231,14 @@ try {
   ok((await ping(A, pu, "test-aikotoba")).includes("共有用のスクリプトではありません"), "通信テスト用の URL（合言葉が合う）→ 別のスクリプトと出る");
   ok((await ping(A, pu, "ちがう")).includes("共有用のスクリプトではありません"), "通信テスト用の URL（合言葉が違う）→ 別のスクリプトと出る");
   probe.close();
+  const old = http.createServer((q, r) => {
+    r.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
+    r.end(JSON.stringify({ ok: true, name: "前の版", v: 1 }));
+  });
+  await new Promise((r) => old.listen(0, r));
+  const ov = await ping(A, `http://localhost:${old.address().port}/exec`, "x");
+  ok(ov.startsWith("つながりました") && ov.includes("古い版"), "前の版のスクリプト → つながるが「古い版」と出る");
+  old.close();
 
   ok(A.errs.length === 0 && B.errs.length === 0, "画面のエラーなし " + JSON.stringify([...A.errs, ...B.errs]));
 } catch (e) {
