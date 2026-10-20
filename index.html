@@ -1106,6 +1106,66 @@
         text-overflow: ellipsis;
         max-width: 300px;
       }
+      /* 共有シート（v2.1.0〜 開発中） */
+      .devBadge {
+        font-size: 10px;
+        font-weight: 800;
+        color: #fff;
+        background: #9a6a00;
+        border-radius: 4px;
+        padding: 1px 5px;
+        margin-left: 4px;
+        vertical-align: 2px;
+      }
+      .sheetState {
+        font: inherit;
+        font-size: 12px;
+        white-space: nowrap;
+        border: 1px solid var(--line);
+        background: #fff;
+        border-radius: 999px;
+        padding: 2px 10px;
+        cursor: pointer;
+        color: var(--green);
+      }
+      .sheetState[data-state="busy"] {
+        color: var(--sub);
+      }
+      .sheetState[data-state="pending"] {
+        color: #9a6a00;
+      }
+      .sheetState[data-state="error"],
+      .sheetState[data-state="conflict"] {
+        color: #fff;
+        background: var(--red);
+        border-color: var(--red);
+      }
+      .sheetHow {
+        margin: 6px 0;
+        font-size: 12px;
+      }
+      .sheetHow ol {
+        margin: 6px 0;
+        padding-left: 20px;
+        line-height: 1.6;
+      }
+      .sheetBtns {
+        margin: 6px 0;
+      }
+      .sheetTabList .menuItem {
+        width: 100%;
+      }
+      .cfVal {
+        white-space: pre-wrap;
+        max-width: 260px;
+      }
+      .cfVal small {
+        display: block;
+        color: var(--sub);
+      }
+      .cfPick {
+        white-space: nowrap;
+      }
       .tbActions {
         display: flex;
         align-items: center;
@@ -2528,7 +2588,7 @@
       <header class="topbar">
         <div class="tbBrand">
           <div class="logo">A</div>
-          <h1><span class="tbName">AniRetake </span><span class="ver" id="appVer"></span></h1>
+          <h1><span class="tbName">AniRetake </span><span class="ver" id="appVer"></span><span class="devBadge" title="スプレッドシート共有の開発版です。公開版とは別に試すためのものです">開発版</span></h1>
         </div>
         <div class="tbCommon" aria-label="共通情報">
           <details class="menu epMenu" id="epMenu">
@@ -2539,6 +2599,9 @@
               <div class="menuSep"></div>
               <button class="menuItem" id="epNew">
                 ＋ 新しい話数を作る<small>同じ作品コードで次の話数。工程名は引き継ぎ、日付は空</small>
+              </button>
+              <button class="menuItem" id="epFromSheet">
+                共有シートから話数を開く<small>他の人が共有した話数に参加する（開発中）</small>
               </button>
               <button class="menuItem danger" id="epDel">この話数を削除</button>
             </div>
@@ -2559,6 +2622,7 @@
           ><button data-view="card" class="on" title="カードを1枚ずつ編集する">カード</button
           ><button data-view="grid" title="全カットを表で見ながら続けて入力する（オールラッシュ向け）">一覧入力</button></div>
         <div class="status" id="save">自動保存：待機中</div>
+        <button class="sheetState" id="sheetState" hidden>共有：待機中</button>
         <div class="tbActions">
           <button class="btn primary" id="png" title="Ctrl/⌘+S">PNG書き出し</button
           ><button class="btn secondary" id="allpng" title="全カットの最新版をZIPにまとめて書き出し">
@@ -2584,6 +2648,9 @@
               ><button class="menuItem" data-table="importPaste">
                 表を読み込む（貼り付け）<small>スプレッドシートの範囲をコピーして貼る</small>
               </button>
+              <div class="menuGroup">共有シート（開発中）</div>
+              <button class="menuItem" id="sheetSyncNow">今すぐ同期<small>共有している話数だけ</small></button
+              ><button class="menuItem" id="sheetOpen">共有シートを開く<small>別のタブで開きます</small></button>
               <div class="menuGroup">バックアップ</div>
               <button
                 class="menuItem"
@@ -2982,6 +3049,34 @@
             <button class="small" id="resetMatLabels">初期値に戻す</button>
           </div>
         </div>
+        <div class="settingsSection" id="sheetSettings">
+          <h3>スプレッドシート共有（開発中）</h3>
+          <div class="hint">
+            Google スプレッドシートを置き場にして、同じ話数を複数人で入力できます。文字の項目だけを同期し、参考画像は送りません。
+          </div>
+          <details class="sheetHow">
+            <summary>はじめに1回だけ（シートを用意する人）</summary>
+            <ol>
+              <li>Google スプレッドシートを新しく作り、メニューの「拡張機能」→「Apps Script」を開く</li>
+              <li>下の「スクリプトをコピー」を押し、Apps Script の中身を全部消して貼り付ける</li>
+              <li>1行目近くの <code>const KEY = "ここに合言葉";</code> を、メンバーと決めた合言葉に書き換えて保存</li>
+              <li>「デプロイ」→「新しいデプロイ」→ 種類「ウェブアプリ」。実行ユーザー「自分」、アクセスできるユーザー「全員」でデプロイし、承認する</li>
+              <li>表示された URL（…/exec）と合言葉をメンバーに伝える（社外には出さない）</li>
+            </ol>
+            <div class="hint">スクリプトを直したときは「デプロイを管理」→ 編集 → バージョン「新バージョン」で更新します（URL は変わりません）。</div>
+          </details>
+          <div class="field"><label for="sheetUrl">ウェブアプリの URL</label><input id="sheetUrl" placeholder="https://script.google.com/macros/s/…/exec" /></div>
+          <div class="field"><label for="sheetKey">合言葉</label><input id="sheetKey" type="password" autocomplete="off" /></div>
+          <div class="field"><label for="sheetUser">自分の名前（シートの「更新者」に出ます）</label><input id="sheetUser" maxlength="30" /></div>
+          <div class="btnrow sheetBtns">
+            <button class="btn secondary" id="sheetCopyScript">スクリプトをコピー</button
+            ><button class="btn secondary" id="sheetTest">接続テスト</button>
+          </div>
+          <div class="hint" id="sheetTestOut"></div>
+          <div class="hint" id="sheetEpState"></div>
+          <button class="btn primary" id="sheetShare" style="width: 100%; margin-top: 6px">この話数を共有する</button>
+          <div class="hint">他の人が共有した話数に参加するときは、「話数 ▾」→「共有シートから話数を開く」を使います。</div>
+        </div>
         <div class="settingsSection">
           <h3>担当工程</h3>
           <div class="hint">カード左の担当欄に表示する工程です。</div>
@@ -3000,6 +3095,34 @@
           <button class="btn dangerBtn" id="clearBackups" style="margin-top: 8px">
             古い形式の退避データを削除
           </button>
+        </div>
+      </div>
+    </div>
+    <div class="modal" id="sheetTabModal">
+      <div class="dialog">
+        <div class="formHead">
+          <div>
+            <h2 style="margin: 0">共有シートから話数を開く</h2>
+            <div class="hint">開く話数を選びます。手元に新しい話数として作り、シートの内容を取り込みます</div>
+          </div>
+          <button class="small" id="sheetTabCancel">やめる</button>
+        </div>
+        <div id="sheetTabList" class="sheetTabList"></div>
+      </div>
+    </div>
+    <div class="modal" id="sheetConflictModal">
+      <div class="dialog wide">
+        <div class="formHead">
+          <div>
+            <h2 style="margin: 0">共有シートとの衝突</h2>
+            <div class="hint">同じ項目を、自分と他の人（またはシート）が別々に直しました。残す方を選んでください。選ぶまで、この項目は同期しません</div>
+          </div>
+          <button class="small" id="sheetConflictClose">あとで</button>
+        </div>
+        <div class="impList" id="sheetConflictList"></div>
+        <div class="btnrow" style="margin-top: 10px">
+          <button class="btn secondary" id="sheetAllSheet">すべてシートの値にする</button
+          ><button class="btn secondary" id="sheetAllMine">すべて自分の値にする</button>
         </div>
       </div>
     </div>
@@ -3037,7 +3160,7 @@
         KEY2 = "retake.v8",
         SCHEMA = 10,
         JSON_SCHEMA = 5;
-      const APP_VERSION = "2.0.3";
+      const APP_VERSION = "2.1.0-dev";
       const APP_NAME = "AniRetake";
       const DESIGN_W = 1240,
         DESIGN_H = 874;
@@ -3900,6 +4023,10 @@
       const foreignMeta = (m) => !!m && !(m.tab === seenTab && m.rev === docRev);
       function schedule() {
         dirty = true;
+        // 共有シート（v2.1.0〜）: 入力が止まったら送る。同期の部分を読み込む前に呼ばれても止まらないように
+        try {
+          sheetTouch();
+        } catch (e) {}
         const now = Date.now();
         if (!firstDirty) firstDirty = now;
         if (saveBlocked) return;
@@ -6621,6 +6748,9 @@
           } else if (!sameAsCur && hasContent) {
             await addEpisode(nc, ne);
           }
+          // 共有している話数を JSON で置き換えるときは共有をやめる（古い内容でシートの新しい内容を上書きしないように。v2.1.0〜）
+          const sharedTab = sheetActiveTab();
+          if (sharedTab) await sheetUnbind(activeEp);
           applyDoc(d, "json");
           if (saveBlocked === "broken" || saveBlocked === "brokenOld") {
             clearBlock();
@@ -6633,6 +6763,10 @@
             imgN = allImgIds().length;
           if (ok) {
             $("save").textContent = `読み込み完了：${cuts.length}カット・画像${imgN}枚`;
+            if (sharedTab)
+              alert(
+                `この話数は共有シートのタブ「${sharedTab}」と同期していたため、同期をやめました（シートの内容はそのまま残っています）。\n続けて共有するときは「話数 ▾」→「共有シートから話数を開く」で開き直してください。`,
+              );
           } else if (!saveBlocked) {
             alert(
               `読み込みましたが、ブラウザへの自動保存に失敗しました。\n空き容量を確認し、必要なデータは「JSON保存」で退避してください。\n（${cuts.length}カット・画像${imgN}枚）`,
@@ -7171,7 +7305,7 @@
         document.title = APP_NAME + " v" + APP_VERSION + " - リテイク指示カード";
         $("helpTitle").textContent = APP_NAME + " バージョン " + APP_VERSION;
         $("helpBody").textContent =
-          `【${APP_NAME}】 バージョン ${APP_VERSION}\n\n■ 用途\nアニメ制作のリテイク指示カードを作成し、印刷・共有用PNGとして書き出します。\n\n■ 免責事項\n・本ソフトウェアは現状のまま提供され、動作や結果について一切の保証をしません。\n・本ソフトウェアの使用、または使用できなかったことによって生じた損害\n　（データの消失・破損、業務上の損失などを含みます）について、開発者は責任を負いません。\n・重要なデータを編集する前に、必ずバックアップ（JSON保存）を取ってください。\n・予告なく機能や仕様の変更、開発の終了を行う場合があります。\n\n■ 使用しているソフトウェア\n・ブラウザ標準 Web API（Canvas / FileReader / localStorage など）\n・追加の外部ライブラリはありません\n・ライセンス：MIT License\n\n■ ショートカット\n${SHORTCUT_ACTIONS.map((a) => "・" + formatShortcut(prefs.shortcuts[a.id]) + " … " + a.label).join("\n")}\n\n■ 版（R回数）\nカットごとに過去の版を残せます。「新しい版を作る」で次のRが空で追加されます。Rの数字を直しても新しい版は増えません。\n全PNG・テキスト・TSVは各カットの最新版（Rが一番大きい版）を出します。画面のPNGは表示中の版です。\n\n■ 修正内容\nリテイク内容とは別の欄です。版ごとに保存し、文字色（黒・赤・青）も版ごとに選べます。空でもカードに欄を出します。\n参考画像は1枚目だけを修正内容の下に出し、2枚目以降は別ページ（1ページ4枚・左上から）です。\n優先度はカード見出しの左端に出します。\n各版に「作業済み」を付けられます。入力欄のチェックは今見ている版、一覧のチェックは最新の版です。印刷用のカードには出しません。\n「入力だけ見る」でプレビューを隠せます。\n\n■ 画面の配置\n上部バーに作品コード・話数・初期R、保存状態、PNG書き出し・全PNG・「出力・保存」メニュー（テキスト・TSV・JSON・状況をコピー・全リセット）、環境設定、ヘルプがあります。\n左はカット一覧、中央は入力欄、右はプレビューです。画面が狭いとき（約1180px以下）は、カット名の横の「入力」「プレビュー」で表示を切り替えます。\nプレビューの大きさは「全体」（カード全体が画面に収まる。最大100%）／「幅」（欄の幅に合わせる）／「100%」で切り替えます。列の境目をドラッグすると一覧・プレビューの幅を変えられ、ダブルクリックで自動に戻ります。\nプレビューをクリックするか「拡大」で画面いっぱいに表示します（もう一度クリックかEscで戻る）。拡大中も前／次のカットのショートカットが使えます。\n\n■ カット一覧のキー操作\n一覧をクリックしたあと、↑↓で選択、Home／Endで先頭／末尾、Enterでリテイク内容の入力欄へ、Spaceで最新の版の済／未を切り替えます。入力欄でEscを押すと一覧へ戻ります（日本語の変換中は除く）。\n一覧の上の「すべて／未了／済」の札で、最新の版の状態で絞り込めます（「未了」が以前の「作業済みを隠す」）。\n\n■ 撮影テイク\n版の欄の「撮影」で、本撮（v）・T撮（t）・線撮（s）のどれかを選び（もう一度押すと外す）、種類ごとにテイク番号を入れます。カードではリテイク欄の右に3段で出し、選んだ種類を赤丸で囲み、番号は v-01 のように2桁で出します。番号が空でも v- までは出すので手書きできます。テキスト出力にも出します。\n記号（v / t / s）は撮影会社の表記に合わせて、環境設定の「撮影テイクの記号」で変えられます。\n\n■ 撮入れ素材\n版ごとに、撮影に入れる素材（セル・BG・CG・2D・撮R）にチェックを付けられます。カードでは修正内容欄の右端に「撮入れ」の縦枠を出し、6枠すべてを□付きで並べます。チェックした素材だけ□に赤い印が付きます。6枠目は初期では名前のない□だけの枠で、印刷後の手書きに使えます。右隣の「R」列は素材ごとのR回数の欄です。入力欄で素材名の横にR回数を入れるとカードに出ます。空欄なら手書き用に空けておきます。\n枠の名前は環境設定の「撮入れ素材の名前」で変えられます（2文字がおすすめ）。名前を変えても付けたチェックは残ります。テキスト出力にも出します（表用TSVには出しません）。\n入力欄を触っている間は、プレビューの対応する欄が青く光ります（画面表示だけで、書き出しには出ません）。\n\n■ 作品・話数の切り替え\n上部の「話数 ▾」から、保存済みの作品・話数を切り替えます。「＋ 新しい話数を作る」は同じ作品コードで次の話数を作ります（工程名は引き継ぎ、日付は空）。カット・工程の日付・選択位置は話数ごと、用紙・ショートカット・撮入れ素材名・列幅は全話数で共通です。\n全PNG・テキスト・TSV・JSON保存は、開いている話数だけを出します。JSON読込は、同じ作品・話数が保存済みならそこを置き換え（確認あり）、無ければ新しい話数として追加します。\n\n■ 一覧入力（オールラッシュ向け）\n上部の「カード／一覧入力」で切り替えます。一覧入力では、全カットを1行ずつの表で見ながら続けて入力できます。「表を全面」は全項目、「入力欄つき」は左に入力欄を残して主な項目だけを出します（画面が狭いときは表を全面だけ）。\nセルを選んでそのまま打つと入力（日本語入力もそのまま）。Enter で確定して下へ、Tab で右へ、Shift+Enter でセル内の改行、Esc で取り消し。Enter や F2 で今の内容を直せます。済は Space かクリックで切り替え。\n一番下の行に入力すると新しいカットになります（カット番号を入れなければ前の行の次の番号）。すでにあるカット番号を入れると、そのカットの新しい版（次のR）になります。\nスプレッドシートの範囲をコピーして貼り付けると、複数行・複数列をまとめて入れます（入力済みのセルを置き換えるときは確認があります）。No をダブルクリックすると、そのカットをカードで開きます。\n列の幅は、見出しの右端をドラッグすると変えられます（ダブルクリックで元の幅）。幅は「表を全面」「入力欄つき」で共通で、次に開いたときも残ります。\n担当・戻し日・確認は版ごとの作業記入欄です（カードには出しません）。\n\n■ 表（スプレッドシート）の書き出しと読み込み\n「出力・保存」または一覧入力の「表を書き出し」で、xlsx を書き出します。一覧型（カードの項目を列に）、作業チェック型（撮入れを素材ごとの●の列に分け、担当・戻し日・確認の記入欄つき）、読み込み用テンプレート（プルダウンと使い方つき）の3つです。Excel・Google スプレッドシートで開けます。\n「表を読み込む」では、xlsx・CSV のファイルか、範囲をコピーして貼り付けた表を読みます。列は見出しの文字で判断するので、順番の入れ替えや不要な列の削除をしても読めます。必須はカットの列だけです。\n取り込む前に、新規・版を追加・更新・変化なし・エラーの一覧を出します。確認して「取り込む」を押すまで何も変わりません。同じカット・同じRなら更新、Rが違えば新しい版を追加します。空欄のセルは、入っている内容を消しません。画像は表では扱いません。\n\n■ 兼用カット\n兼用を書くと、兼用先のカットの兼用欄にもカット番号が入ります（写すのは番号だけ）。兼用先のカットがまだ無いときは何もせず、あとでそのカットを追加したときに入ります。兼用を消したときは、消した番号のカットと、同じ兼用に登録されている他のカットからも消すか確認します。カードは両方のカットに出ます（004-005 と 005-004）。\nつながっている兼用はすべてそろえます（004↔005 と 005↔006 があれば、004・005・006 が互いに兼用になります）。番号の先頭の 0 は区別しません（002 と 2 は同じカット）。兼用欄の番号は若い順に並べ替えます（001_002A_002B_003）。\n\n■ カット番号の桁数\nカット番号・兼用を入力すると、数字の前に 0 を足して桁をそろえます（初期は3桁：1 → 001、1A → 001A、2_3 → 002_003）。環境設定の「カット番号の桁数」で 3〜5桁・そろえないを選べます。すでに入っている番号は変えません。\n\n■ 版の操作\n「新しい版を作る」は最大Rの次を空で追加します。Rの数字を直しても新しい版は増えません。同じカットに同じRは持てません。最後の1版は削除できません。カットの削除は全版を消します。\n\n■ 参考画像\n1枚目だけを修正内容の下に出します。2枚目以降は別ページ（1ページ最大4枚、左上から）です。追加はD&DまたはCtrl+V。サムネイルの→で他のカットへ移動・コピー、◀▶で順序変更、✕で外します（画像のクリックでは消えません）。\n「状況をコピー」は、版番号・カット数・画像の枚数・保存状態だけをコピーします。本文と画像そのものは含みません。\n\n■ アプリとしてインストール\nGitHub Pages 版を Chrome / Edge で開くと、上部に「⤓ インストール」が出ます（アドレスバー右のインストールのアイコンでも可）。押すと独立したウィンドウのアプリになり、スタートメニュー・Dock から起動でき、オフラインでも使えます。Mac の Safari は「ファイル」→「Dockに追加」です。\nインストールしたアプリのデータは、そのブラウザで開いた GitHub Pages 版と同じです。index.html をファイルとして開いた場合とは別のデータになります。\n\n■ データの保存場所\nテキスト・設定・開いている話数は localStorage キー：${KEY2}\n画像と、開いていない話数の中身は IndexedDB（ブラウザ内・大容量）に保存\n旧形式のデータ（${KEY}）は移行後もバックアップとして残しています\n（サイトごと。GitHub Pages とローカルファイルでは別データになります）\n\n■ サポート・公式情報\nFANBOX：https://akira0w0.fanbox.cc/\nX（旧Twitter）：https://x.com/Akira_0m0_\n\n(c) 2026 アキラ`;
+          `【${APP_NAME}】 バージョン ${APP_VERSION}\n\n■ 用途\nアニメ制作のリテイク指示カードを作成し、印刷・共有用PNGとして書き出します。\n\n■ 免責事項\n・本ソフトウェアは現状のまま提供され、動作や結果について一切の保証をしません。\n・本ソフトウェアの使用、または使用できなかったことによって生じた損害\n　（データの消失・破損、業務上の損失などを含みます）について、開発者は責任を負いません。\n・重要なデータを編集する前に、必ずバックアップ（JSON保存）を取ってください。\n・予告なく機能や仕様の変更、開発の終了を行う場合があります。\n\n■ 使用しているソフトウェア\n・ブラウザ標準 Web API（Canvas / FileReader / localStorage など）\n・追加の外部ライブラリはありません\n・ライセンス：MIT License\n\n■ ショートカット\n${SHORTCUT_ACTIONS.map((a) => "・" + formatShortcut(prefs.shortcuts[a.id]) + " … " + a.label).join("\n")}\n\n■ 版（R回数）\nカットごとに過去の版を残せます。「新しい版を作る」で次のRが空で追加されます。Rの数字を直しても新しい版は増えません。\n全PNG・テキスト・TSVは各カットの最新版（Rが一番大きい版）を出します。画面のPNGは表示中の版です。\n\n■ 修正内容\nリテイク内容とは別の欄です。版ごとに保存し、文字色（黒・赤・青）も版ごとに選べます。空でもカードに欄を出します。\n参考画像は1枚目だけを修正内容の下に出し、2枚目以降は別ページ（1ページ4枚・左上から）です。\n優先度はカード見出しの左端に出します。\n各版に「作業済み」を付けられます。入力欄のチェックは今見ている版、一覧のチェックは最新の版です。印刷用のカードには出しません。\n「入力だけ見る」でプレビューを隠せます。\n\n■ 画面の配置\n上部バーに作品コード・話数・初期R、保存状態、PNG書き出し・全PNG・「出力・保存」メニュー（テキスト・TSV・JSON・状況をコピー・全リセット）、環境設定、ヘルプがあります。\n左はカット一覧、中央は入力欄、右はプレビューです。画面が狭いとき（約1180px以下）は、カット名の横の「入力」「プレビュー」で表示を切り替えます。\nプレビューの大きさは「全体」（カード全体が画面に収まる。最大100%）／「幅」（欄の幅に合わせる）／「100%」で切り替えます。列の境目をドラッグすると一覧・プレビューの幅を変えられ、ダブルクリックで自動に戻ります。\nプレビューをクリックするか「拡大」で画面いっぱいに表示します（もう一度クリックかEscで戻る）。拡大中も前／次のカットのショートカットが使えます。\n\n■ カット一覧のキー操作\n一覧をクリックしたあと、↑↓で選択、Home／Endで先頭／末尾、Enterでリテイク内容の入力欄へ、Spaceで最新の版の済／未を切り替えます。入力欄でEscを押すと一覧へ戻ります（日本語の変換中は除く）。\n一覧の上の「すべて／未了／済」の札で、最新の版の状態で絞り込めます（「未了」が以前の「作業済みを隠す」）。\n\n■ 撮影テイク\n版の欄の「撮影」で、本撮（v）・T撮（t）・線撮（s）のどれかを選び（もう一度押すと外す）、種類ごとにテイク番号を入れます。カードではリテイク欄の右に3段で出し、選んだ種類を赤丸で囲み、番号は v-01 のように2桁で出します。番号が空でも v- までは出すので手書きできます。テキスト出力にも出します。\n記号（v / t / s）は撮影会社の表記に合わせて、環境設定の「撮影テイクの記号」で変えられます。\n\n■ 撮入れ素材\n版ごとに、撮影に入れる素材（セル・BG・CG・2D・撮R）にチェックを付けられます。カードでは修正内容欄の右端に「撮入れ」の縦枠を出し、6枠すべてを□付きで並べます。チェックした素材だけ□に赤い印が付きます。6枠目は初期では名前のない□だけの枠で、印刷後の手書きに使えます。右隣の「R」列は素材ごとのR回数の欄です。入力欄で素材名の横にR回数を入れるとカードに出ます。空欄なら手書き用に空けておきます。\n枠の名前は環境設定の「撮入れ素材の名前」で変えられます（2文字がおすすめ）。名前を変えても付けたチェックは残ります。テキスト出力にも出します（表用TSVには出しません）。\n入力欄を触っている間は、プレビューの対応する欄が青く光ります（画面表示だけで、書き出しには出ません）。\n\n■ 作品・話数の切り替え\n上部の「話数 ▾」から、保存済みの作品・話数を切り替えます。「＋ 新しい話数を作る」は同じ作品コードで次の話数を作ります（工程名は引き継ぎ、日付は空）。カット・工程の日付・選択位置は話数ごと、用紙・ショートカット・撮入れ素材名・列幅は全話数で共通です。\n全PNG・テキスト・TSV・JSON保存は、開いている話数だけを出します。JSON読込は、同じ作品・話数が保存済みならそこを置き換え（確認あり）、無ければ新しい話数として追加します。\n\n■ 一覧入力（オールラッシュ向け）\n上部の「カード／一覧入力」で切り替えます。一覧入力では、全カットを1行ずつの表で見ながら続けて入力できます。「表を全面」は全項目、「入力欄つき」は左に入力欄を残して主な項目だけを出します（画面が狭いときは表を全面だけ）。\nセルを選んでそのまま打つと入力（日本語入力もそのまま）。Enter で確定して下へ、Tab で右へ、Shift+Enter でセル内の改行、Esc で取り消し。Enter や F2 で今の内容を直せます。済は Space かクリックで切り替え。\n一番下の行に入力すると新しいカットになります（カット番号を入れなければ前の行の次の番号）。すでにあるカット番号を入れると、そのカットの新しい版（次のR）になります。\nスプレッドシートの範囲をコピーして貼り付けると、複数行・複数列をまとめて入れます（入力済みのセルを置き換えるときは確認があります）。No をダブルクリックすると、そのカットをカードで開きます。\n列の幅は、見出しの右端をドラッグすると変えられます（ダブルクリックで元の幅）。幅は「表を全面」「入力欄つき」で共通で、次に開いたときも残ります。\n担当・戻し日・確認は版ごとの作業記入欄です（カードには出しません）。\n\n■ 表（スプレッドシート）の書き出しと読み込み\n「出力・保存」または一覧入力の「表を書き出し」で、xlsx を書き出します。一覧型（カードの項目を列に）、作業チェック型（撮入れを素材ごとの●の列に分け、担当・戻し日・確認の記入欄つき）、読み込み用テンプレート（プルダウンと使い方つき）の3つです。Excel・Google スプレッドシートで開けます。\n「表を読み込む」では、xlsx・CSV のファイルか、範囲をコピーして貼り付けた表を読みます。列は見出しの文字で判断するので、順番の入れ替えや不要な列の削除をしても読めます。必須はカットの列だけです。\n取り込む前に、新規・版を追加・更新・変化なし・エラーの一覧を出します。確認して「取り込む」を押すまで何も変わりません。同じカット・同じRなら更新、Rが違えば新しい版を追加します。空欄のセルは、入っている内容を消しません。画像は表では扱いません。\n\n■ 兼用カット\n兼用を書くと、兼用先のカットの兼用欄にもカット番号が入ります（写すのは番号だけ）。兼用先のカットがまだ無いときは何もせず、あとでそのカットを追加したときに入ります。兼用を消したときは、消した番号のカットと、同じ兼用に登録されている他のカットからも消すか確認します。カードは両方のカットに出ます（004-005 と 005-004）。\nつながっている兼用はすべてそろえます（004↔005 と 005↔006 があれば、004・005・006 が互いに兼用になります）。番号の先頭の 0 は区別しません（002 と 2 は同じカット）。兼用欄の番号は若い順に並べ替えます（001_002A_002B_003）。\n\n■ カット番号の桁数\nカット番号・兼用を入力すると、数字の前に 0 を足して桁をそろえます（初期は3桁：1 → 001、1A → 001A、2_3 → 002_003）。環境設定の「カット番号の桁数」で 3〜5桁・そろえないを選べます。すでに入っている番号は変えません。\n\n■ 版の操作\n「新しい版を作る」は最大Rの次を空で追加します。Rの数字を直しても新しい版は増えません。同じカットに同じRは持てません。最後の1版は削除できません。カットの削除は全版を消します。\n\n■ 参考画像\n1枚目だけを修正内容の下に出します。2枚目以降は別ページ（1ページ最大4枚、左上から）です。追加はD&DまたはCtrl+V。サムネイルの→で他のカットへ移動・コピー、◀▶で順序変更、✕で外します（画像のクリックでは消えません）。\n「状況をコピー」は、版番号・カット数・画像の枚数・保存状態だけをコピーします。本文と画像そのものは含みません。\n\n■ アプリとしてインストール\nGitHub Pages 版を Chrome / Edge で開くと、上部に「⤓ インストール」が出ます（アドレスバー右のインストールのアイコンでも可）。押すと独立したウィンドウのアプリになり、スタートメニュー・Dock から起動でき、オフラインでも使えます。Mac の Safari は「ファイル」→「Dockに追加」です。\nインストールしたアプリのデータは、そのブラウザで開いた GitHub Pages 版と同じです。index.html をファイルとして開いた場合とは別のデータになります。\n\n■ スプレッドシート共有（開発中）\nGoogle スプレッドシートを置き場にして、同じ話数を複数人で入力できます。準備は環境設定の「スプレッドシート共有」を見てください（シートを用意する人が1回だけ Apps Script を設定し、URL と合言葉をメンバーに伝えます）。\n共有している話数は、入力が止まって数秒後にシートへ送り、開いている間は30秒ごとに他の人の変更を取り込みます。上部の「共有：」の札で状態がわかります（押すと今すぐ同期）。\n同期するのは文字の項目だけです。参考画像・工程の日付は送りません。\n同じ版の同じ項目を2人が別々に直したときは「衝突」になり、どちらを残すか選ぶまでその項目は同期しません。入力中の欄は、入力をやめてから取り込みます。\n他の人が共有した話数に参加するときは「話数 ▾」→「共有シートから話数を開く」を使います。シートを直接直しても取り込みます（ID の列・2行目の見出しは変えないでください）。合言葉と URL は社外に出さないでください。\n\n■ データの保存場所\nテキスト・設定・開いている話数は localStorage キー：${KEY2}\n画像と、開いていない話数の中身は IndexedDB（ブラウザ内・大容量）に保存\n旧形式のデータ（${KEY}）は移行後もバックアップとして残しています\n（サイトごと。GitHub Pages とローカルファイルでは別データになります）\n\n■ サポート・公式情報\nFANBOX：https://akira0w0.fanbox.cc/\nX（旧Twitter）：https://x.com/Akira_0m0_\n\n(c) 2026 アキラ`;
       }
       $("helpBtn").onclick = () => {
         fillHelp();
@@ -7275,6 +7409,10 @@
         $("q").value = "";
         loadToForm();
         renderAll();
+        try {
+          sheetShow();
+          if (sheetActiveTab()) sheetCycle();
+        } catch (e) {}
       }
       function epLoadFailed(e) {
         showBanner(
@@ -9369,9 +9507,908 @@
             }),
         );
       }
+
+      // ===================== v2.1.0 スプレッドシート共有（開発中） =====================
+      // 共有シート（Google スプレッドシート＋Apps Script）を、複数人の共通の置き場にして文字の項目を同期する。
+      // 1版1行。行の鍵は版の id。各アプリは「最後にシートと一致していた値（基準）」を持ち、
+      // 基準から自分だけが変えた項目は送り、シートだけが変わった項目は受け取り、両方が変えた項目は「衝突」として選んでもらう。
+      // 送るときは「元の値がこうなら書き換える」形にして、先に他の人が直していたら書かない（衝突になる）。画像は扱わない。
+      const SHEET_CFG_KEY = "retake.sheet",
+        SHEET_ST_PREFIX = "sheet:",
+        SHEET_IDV = "ID(版)",
+        SHEET_IDC = "ID(カット)",
+        SHEET_WHO = "更新者",
+        SHEET_WHEN = "更新日時",
+        SHEET_DELAY = 3000,
+        SHEET_POLL = 30000;
+      const SHEET_FIELDS = ["done", "cut", "subcut", "body", "instr", "instrColor", "note", "retakeDate", "priority", "assignee", "r", "mats", "take", "returnDate", "check"];
+      const sheetLabel = (k) => TCOLS[k].label;
+      const sheetNorm = (x) => String(x == null ? "" : x).replace(/\r\n?/g, "\n");
+      // 設定（URL・合言葉・名前・共有している話数）は JSON 保存に入れない（他の人に渡したときに合言葉が付いていかないように）
+      function sheetCfg() {
+        let c = null;
+        try {
+          c = JSON.parse(localStorage.getItem(SHEET_CFG_KEY) || "null");
+        } catch (e) {}
+        c = c && typeof c === "object" ? c : {};
+        return {
+          url: typeof c.url === "string" ? c.url : "",
+          key: typeof c.key === "string" ? c.key : "",
+          user: typeof c.user === "string" ? c.user : "",
+          eps: c.eps && typeof c.eps === "object" ? c.eps : {},
+        };
+      }
+      function sheetSaveCfg(c) {
+        try {
+          localStorage.setItem(SHEET_CFG_KEY, JSON.stringify(c));
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+      const sheetUrlOk = (u) => /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(u) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(u);
+      const sheetTabOf = () => {
+        const c = common();
+        return `${c.code || "作品"}_${c.ep || "話数"}`;
+      };
+      const sheetActiveTab = () => sheetCfg().eps[activeEp] || "";
+
+      // ---------- 版の項目を、シートのセルの文字にする／セルの文字を版に入れる ----------
+      function sheetGet(k, c, v) {
+        if (k === "cut") return sheetNorm(c.cut);
+        if (k === "subcut") return sheetNorm(c.subcut);
+        if (k === "priority") return sheetNorm(c.priority);
+        return sheetNorm(TCOLS[k].get(c, v));
+      }
+      // "same"／"changed"／読めないときはその理由の文
+      function sheetSet(k, c, v, x) {
+        x = sheetNorm(x);
+        if (k === "cut") return setStr(c, "cut", cleanCut(x));
+        if (k === "subcut") return setStr(c, "subcut", cleanCut(x));
+        return TCOLS[k].set(c, v, x);
+      }
+      // 何も入っていない版（＋追加した直後など）は送らない
+      const sheetBlank = (c, v) => !c.cut && !c.subcut && !(v.body || "").trim() && !(v.instr || "").trim() && !(v.note || "").trim();
+      function sheetProject() {
+        const out = {};
+        cuts.forEach((c) => {
+          if (!c.id) c.id = newId("c");
+          vers(c).forEach((v) => {
+            if (!v.id) v.id = newId("v");
+            if (sheetBlank(c, v)) return;
+            const f = {};
+            SHEET_FIELDS.forEach((k) => (f[k] = sheetGet(k, c, v)));
+            out[v.id] = { c: c.id, f };
+          });
+        });
+        return out;
+      }
+      function sheetFind(vid) {
+        for (const c of cuts) {
+          const v = (c.versions || []).find((x) => x.id === vid);
+          if (v) return { c, v };
+        }
+        return null;
+      }
+      // シートの応答（見出し＋行）を、版の id ごとの表にする。ID の無い行（シートで足した行）は別に返す
+      function sheetParse(g) {
+        const head = (g.head || []).map((h) => String(h).trim()),
+          col = {};
+        head.forEach((h, i) => {
+          if (h && col[h] == null) col[h] = i;
+        });
+        const R = {},
+          manual = [];
+        (g.rows || []).forEach((r, i) => {
+          const f = {};
+          SHEET_FIELDS.forEach((k) => {
+            const j = col[sheetLabel(k)];
+            f[k] = j == null ? undefined : sheetNorm(r[j]);
+          });
+          const id = col[SHEET_IDV] == null ? "" : String(r[col[SHEET_IDV]] || "").trim();
+          const row = { c: col[SHEET_IDC] == null ? "" : String(r[col[SHEET_IDC]] || "").trim(), f, row: i, who: col[SHEET_WHO] == null ? "" : String(r[col[SHEET_WHO]] || "") };
+          if (!id) {
+            if (Object.values(f).some((x) => x && x.trim())) manual.push(row);
+          } else if (!R[id]) R[id] = row;
+        });
+        return { R, manual };
+      }
+      const sheetSameRow = (a, b) => SHEET_FIELDS.every((k) => (a.f[k] === undefined || b.f[k] === undefined ? true : a.f[k] === b.f[k]));
+      const sheetClone = (r) => ({ c: r.c, f: Object.assign({}, r.f) });
+
+      // ---------- 3者（基準 B・手元 L・シート R）を比べて、することを決める（画面やデータには触らない） ----------
+      // skip: 今入力中の版の id（シートからの変更はあとで反映する）。all=true なら全部あとで
+      function sheetMerge(B, L, R, skip) {
+        const nb = {},
+          ops = [],
+          apply = [],
+          create = [],
+          remove = [],
+          conflicts = [],
+          notes = [];
+        const ids = new Set([...Object.keys(B), ...Object.keys(L), ...Object.keys(R)]);
+        ids.forEach((id) => {
+          const b = B[id],
+            l = L[id],
+            r = R[id];
+          if (!l && !r) return;
+          if (l && !r) {
+            // シートから消えた: 手元で直していなければ手元も消す。直していれば、手元の内容で戻す
+            if (b && sheetSameRow(b, l)) {
+              if (skip.has(id)) nb[id] = sheetClone(b);
+              else remove.push(id);
+              return;
+            }
+            if (b) notes.push({ id, kind: "readd" });
+            ops.push({ t: "add", id, c: l.c, f: l.f });
+            nb[id] = sheetClone(l);
+            return;
+          }
+          if (!l && r) {
+            // 手元で消した: シートが基準のままならシートからも消す。他の人が直していたら、シートの内容で戻す
+            if (b && sheetSameRow(b, r)) {
+              ops.push({ t: "del", id, x: r.f, back: sheetClone(r) });
+              return;
+            }
+            if (skip.all) {
+              if (b) nb[id] = sheetClone(b);
+              return;
+            }
+            if (b) notes.push({ id, kind: "restore" });
+            create.push(id);
+            nb[id] = sheetClone(r);
+            return;
+          }
+          const row = { c: r.c || l.c, f: {} },
+            later = skip.has(id);
+          nb[id] = row;
+          SHEET_FIELDS.forEach((k) => {
+            const bv = b ? b.f[k] : undefined,
+              lv = l.f[k];
+            // シートに列が無い項目は、シートでは変わっていないとみなす
+            const rv = r.f[k] === undefined ? (bv === undefined ? "" : bv) : r.f[k];
+            if (lv === rv) return (row.f[k] = rv);
+            if (rv === bv) {
+              ops.push({ t: "set", id, k, x: rv, v: lv });
+              return (row.f[k] = lv);
+            }
+            if (lv === bv) {
+              if (later) return (row.f[k] = bv);
+              apply.push({ id, k, v: rv });
+              return (row.f[k] = rv);
+            }
+            conflicts.push({ id, k, local: lv, remote: rv });
+            row.f[k] = bv;
+          });
+        });
+        return { nb, ops, apply, create, remove, conflicts, notes };
+      }
+
+      // ---------- シートの内容を手元に反映する ----------
+      function sheetNewCut(cid) {
+        const c = { id: cid || newId("c"), cut: "", subcut: "", priority: "", selectedVer: 0, versions: [] };
+        cuts.push(c);
+        return c;
+      }
+      // 新しい版を作り、項目を入れる。R が重なるときは作らずに理由を返す
+      function sheetCreate(vid, row) {
+        let c = (row.c && cuts.find((x) => x.id === row.c)) || null;
+        const rN = parseR(row.f.r);
+        if (c && (c.versions || []).some((x) => (x.r | 0) === rN)) return `${c.cut || "カット"} の ${rrLabel(rN)} はすでにあります`;
+        if (!c) c = sheetNewCut(row.c);
+        const v = emptyVer(rN);
+        v.id = vid;
+        c.versions.push(v);
+        const errs = [];
+        SHEET_FIELDS.forEach((k) => {
+          if (row.f[k] === undefined || k === "r") return;
+          const res = sheetSet(k, c, v, row.f[k]);
+          if (res !== "same" && res !== "changed") errs.push(res);
+        });
+        return errs.length ? errs.join("／") : "";
+      }
+      function sheetRemove(vid) {
+        const hit = sheetFind(vid);
+        if (!hit) return;
+        const { c, v } = hit;
+        const cur = cuts[selected];
+        c.versions = c.versions.filter((x) => x !== v);
+        if (!c.versions.length) cuts = cuts.filter((x) => x !== c);
+        else c.selectedVer = Math.min(c.selectedVer | 0, c.versions.length - 1);
+        if (!cuts.length) cuts.push({ id: newId("c"), cut: "", subcut: "", priority: "", selectedVer: 0, versions: [emptyVer(1)] });
+        const i = cuts.indexOf(cur);
+        selected = i >= 0 ? i : Math.min(selected, cuts.length - 1);
+      }
+
+      // ---------- 通信 ----------
+      async function sheetFetch(cfg, params, body) {
+        const ctl = typeof AbortController !== "undefined" ? new AbortController() : null,
+          timer = ctl && setTimeout(() => ctl.abort(), 40000);
+        try {
+          let res;
+          if (body)
+            res = await fetch(cfg.url, {
+              method: "POST",
+              headers: { "Content-Type": "text/plain;charset=utf-8" },
+              body: JSON.stringify(Object.assign({ key: cfg.key, user: cfg.user }, body)),
+              signal: ctl && ctl.signal,
+            });
+          else {
+            const q = new URLSearchParams(Object.assign({ key: cfg.key }, params));
+            res = await fetch(cfg.url + (cfg.url.includes("?") ? "&" : "?") + q.toString(), { signal: ctl && ctl.signal });
+          }
+          const text = await res.text();
+          let d;
+          try {
+            d = JSON.parse(text);
+          } catch (e) {
+            throw Object.assign(new Error("応答を読めません"), { kind: "bad" });
+          }
+          if (!d.ok) throw Object.assign(new Error(d.error || "error"), { kind: d.error === "key" ? "key" : "server" });
+          return d;
+        } catch (e) {
+          if (!e.kind) e.kind = "net";
+          throw e;
+        } finally {
+          if (timer) clearTimeout(timer);
+        }
+      }
+
+      // ---------- 話数ごとの同期の状態（基準など）は IndexedDB に置く ----------
+      let sheetSt = null; // { ep, tab, h, base, remote, conflicts, url }
+      async function sheetState(ep, tab) {
+        if (sheetSt && sheetSt.ep === ep && sheetSt.tab === tab) return sheetSt;
+        const rec = idb.db ? await idb.get(SHEET_ST_PREFIX + ep) : null;
+        const ok = rec && typeof rec === "object" && rec.tab === tab && rec.base && typeof rec.base === "object";
+        sheetSt = { ep, tab, h: "", base: ok ? rec.base : {}, remote: null, conflicts: [], url: ok ? rec.url || "" : "" };
+        return sheetSt;
+      }
+      function sheetStore(st) {
+        if (!idb.db) return Promise.resolve(false);
+        return idb.putMany("kv", [[SHEET_ST_PREFIX + st.ep, { tab: st.tab, base: st.base, url: st.url, at: Date.now() }]]);
+      }
+
+      // ---------- 同期の1回分（同時には1つだけ） ----------
+      let sheetBusy = false,
+        sheetAgain = false,
+        sheetTimer = 0,
+        sheetApplying = false,
+        sheetLast = { state: "off", at: 0, msg: "" };
+      function sheetTouch() {
+        if (sheetApplying || !sheetActiveTab()) return;
+        clearTimeout(sheetTimer);
+        sheetTimer = setTimeout(() => sheetCycle(), SHEET_DELAY);
+        sheetShow();
+      }
+      function sheetSkip() {
+        const s = new Set();
+        const a = document.activeElement;
+        const typing = !!a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && a.type !== "checkbox" && a.type !== "file"));
+        // 一覧の入力中・日本語の変換中は、シートからの変更をすべてあとで反映する（入力中の欄を書き換えないように）
+        if ((typeof gridEditing !== "undefined" && gridEditing) || (typing && a.closest && a.closest(".gridPane"))) {
+          s.all = true;
+          Object.keys(sheetSt ? sheetSt.base : {}).forEach((id) => s.add(id));
+          cuts.forEach((c) => vers(c).forEach((v) => s.add(v.id)));
+          return s;
+        }
+        if (typing && a.closest && a.closest(".form") && cuts[selected]) vers(cuts[selected]).forEach((v) => s.add(v.id));
+        return s;
+      }
+      async function sheetCycle() {
+        clearTimeout(sheetTimer);
+        const cfg = sheetCfg(),
+          tab = cfg.eps[activeEp];
+        if (!tab || !cfg.url) return sheetShow();
+        if (saveBlocked) return sheetShow("error", "自動保存が止まっているため同期していません");
+        if (sheetBusy) {
+          sheetAgain = true;
+          return;
+        }
+        sheetBusy = true;
+        const ep = activeEp;
+        sheetShow("busy");
+        try {
+          const st = await sheetState(ep, tab);
+          let g = await sheetFetch(cfg, { op: "rows", tab, h: st.remote ? st.h : "" });
+          // 待っている間に話数を切り替えた・共有をやめた（JSON読込など）ときは何もしない
+          if (ep !== activeEp || sheetCfg().eps[ep] !== tab || sheetSt !== st) return;
+          let parsed;
+          if (g.same && st.remote) parsed = st.remote;
+          else if (g.missing) parsed = { R: {}, manual: [] };
+          else parsed = sheetParse(g);
+          st.h = g.missing ? "" : g.h || "";
+          st.remote = parsed;
+          if (g.url) st.url = g.url;
+          const skip = sheetSkip(),
+            L = sheetProject(),
+            plan = sheetMerge(st.base, L, parsed.R, skip);
+          // 手元に反映（同じ流れの中で、続けて送る内容を決める）
+          let changed = false;
+          const notes = [];
+          const labelOf = (id, row) => {
+            const hit = sheetFind(id),
+              f = (row && row.f) || {};
+            return hit ? `${hit.c.cut || "（番号なし）"} ${rrLabel(hit.v.r)}` : `${f.cut || "（番号なし）"} ${f.r || ""}`;
+          };
+          sheetApplying = true;
+          try {
+            plan.create.forEach((id) => {
+              const err = sheetCreate(id, parsed.R[id]);
+              changed = true;
+              if (err) notes.push(`${labelOf(id, parsed.R[id])}：${err}`);
+            });
+            plan.apply.forEach((a) => {
+              const hit = sheetFind(a.id);
+              if (!hit) return;
+              const res = sheetSet(a.k, hit.c, hit.v, a.v);
+              if (res === "changed") changed = true;
+              else if (res !== "same") {
+                notes.push(`${labelOf(a.id)}：${res}`);
+                // 反映できなかった項目は基準を戻し、衝突として出す（「自分」を選ぶと手元の値をシートに送る）
+                plan.nb[a.id].f[a.k] = st.base[a.id] ? st.base[a.id].f[a.k] : undefined;
+                plan.conflicts.push({ id: a.id, k: a.k, local: sheetGet(a.k, hit.c, hit.v), remote: a.v });
+              }
+            });
+            plan.remove.forEach((id) => {
+              sheetRemove(id);
+              changed = true;
+            });
+            // シートで足した行（ID が空）: 手元に新しい版を作り、ID を書き戻す
+            if (!skip.all)
+              parsed.manual.forEach((m) => {
+                const cutNo = cleanCut(m.f.cut || "");
+                if (!cutNo) return notes.push(`シートの${m.row + 3}行目：カット番号が無いので取り込みませんでした`);
+                const same = cuts.find((c) => kenyoEq(kenyoKey(c.cut), kenyoKey(cutNo)) && c.cut);
+                const id = newId("v"),
+                  cid = same ? same.id || (same.id = newId("c")) : newId("c");
+                const err = sheetCreate(id, { c: cid, f: m.f });
+                if (/すでにあります$/.test(err)) return notes.push(`シートの${m.row + 3}行目：${err}（取り込みませんでした）`);
+                const hit = sheetFind(id);
+                if (!hit) return;
+                changed = true;
+                if (err) notes.push(`シートの${m.row + 3}行目：${err}`);
+                plan.ops.push({ t: "claim", id, c: hit.c.id, row: m.row, k: sheetLabel("cut"), x: m.f.cut || "", claim: true });
+                const f = {};
+                SHEET_FIELDS.forEach((k) => (f[k] = m.f[k] === undefined ? "" : m.f[k]));
+                plan.nb[id] = { c: hit.c.id, f };
+              });
+            // 共有シートから開いた話数: 最初から入っていた空のカットを外す
+            if (st.dropBlank && cuts.length > 1) {
+              const blank = cuts.find((c) => c.id === st.dropBlank && vers(c).every((v) => sheetBlank(c, v)));
+              if (blank) {
+                const cur = cuts[selected];
+                cuts = cuts.filter((c) => c !== blank);
+                selected = Math.max(0, cuts.indexOf(cur));
+                changed = true;
+              }
+              st.dropBlank = "";
+            }
+            if (changed) {
+              sortCuts();
+              const editing = skip.size > 0;
+              if (!editing) loadToForm();
+              renderAll();
+              schedule();
+            }
+          } finally {
+            sheetApplying = false;
+          }
+          plan.notes.forEach((n) => notes.push(`${labelOf(n.id)}：${n.kind === "readd" ? "他の人がシートから消しましたが、こちらで直していたので戻しました" : "こちらで消しましたが、他の人が直していたので戻しました"}`));
+          // 送る（項目の書き込みは「元の値がこうなら」で、先に他の人が直していたら書かれない）
+          const ops = plan.ops.filter((o) => !(o.t === "set" && plan.nb[o.id] === undefined));
+          if (ops.length) {
+            sheetShow("busy", `送信中（${ops.length}件）`);
+            const sendOps = ops.map((o) =>
+              o.t === "set"
+                ? { t: "set", id: o.id, k: sheetLabel(o.k), x: o.x, v: o.v }
+                : o.t === "add"
+                  ? { t: "add", id: o.id, c: o.c, f: Object.fromEntries(SHEET_FIELDS.map((k) => [sheetLabel(k), o.f[k]])) }
+                  : o.t === "del"
+                    ? { t: "del", id: o.id, x: Object.fromEntries(SHEET_FIELDS.filter((k) => o.x[k] !== undefined).map((k) => [sheetLabel(k), o.x[k]])) }
+                    : { t: "claim", id: o.id, c: o.c, row: o.row, k: o.k, x: o.x },
+            );
+            const cm = common();
+            const p = await sheetFetch(cfg, null, {
+              tab,
+              head: SHEET_FIELDS.map(sheetLabel),
+              title: `作品コード ${cm.code}　話数 ${cm.ep}　AniRetake 共有シート（ID・更新者・更新日時の列と2行目の見出しは変えないでください）`,
+              ops: sendOps,
+            });
+            if (p.url) st.url = p.url;
+            (p.res || []).forEach((r) => {
+              if (r.ok) return;
+              const o = ops[r.i];
+              if (!o) return;
+              // 書けなかったものは、基準を送る前の値に戻す（次の同期で、シートの今の値と比べ直す）
+              if (o.t === "set" && plan.nb[o.id]) plan.nb[o.id].f[o.k] = o.x;
+              else if (o.t === "add") delete plan.nb[o.id];
+              else if (o.t === "del") plan.nb[o.id] = o.back;
+              else if (o.t === "claim") delete plan.nb[o.id];
+            });
+            st.h = "";
+            sheetAgain = sheetAgain || (p.res || []).some((r) => !r.ok);
+          }
+          st.base = plan.nb;
+          st.conflicts = plan.conflicts;
+          await sheetStore(st);
+          if (notes.length) sheetNotice(notes);
+          sheetShow("ok");
+        } catch (e) {
+          console.error(e);
+          sheetShow("error", e.kind === "key" ? "合言葉が違います（環境設定で確認してください）" : e.kind === "net" ? "つながりません" : e.kind === "bad" ? "シートの応答を読めません（URL を確認してください）" : "シートでエラーが出ました（" + e.message + "）");
+        } finally {
+          sheetBusy = false;
+          if (sheetAgain) {
+            sheetAgain = false;
+            clearTimeout(sheetTimer);
+            sheetTimer = setTimeout(() => sheetCycle(), 1500);
+          }
+        }
+      }
+      // 同じお知らせは繰り返さない（直るまで毎回の同期で出続けないように）
+      const sheetNoticed = new Set();
+      function sheetNotice(lines) {
+        lines = lines.filter((l) => !sheetNoticed.has(l));
+        if (!lines.length) return;
+        lines.forEach((l) => sheetNoticed.add(l));
+        const msg = "共有シートとの同期：" + lines.slice(0, 3).join("　") + (lines.length > 3 ? `　ほか${lines.length - 3}件` : "");
+        if (isGridView()) gridFlash(msg);
+        // 保存のエラーなど、ほかのお知らせが出ているときは上書きしない
+        const b = $("storeBanner");
+        if (!b.classList.contains("show") || b.dataset.tag === "sheetNote") showBanner(escHtml(msg), [], "sheetNote");
+      }
+      // 未送信の項目数（基準と手元の違い。衝突は除く）
+      function sheetPending() {
+        if (!sheetSt || sheetSt.ep !== activeEp) return 0;
+        const L = sheetProject(),
+          B = sheetSt.base,
+          cf = new Set(sheetSt.conflicts.map((x) => x.id + "\n" + x.k));
+        let n = 0;
+        new Set([...Object.keys(B), ...Object.keys(L)]).forEach((id) => {
+          const b = B[id],
+            l = L[id];
+          if (!b || !l) return n++;
+          SHEET_FIELDS.forEach((k) => {
+            if (l.f[k] !== b.f[k] && !cf.has(id + "\n" + k)) n++;
+          });
+        });
+        return n;
+      }
+      function sheetShow(state, msg) {
+        const el = $("sheetState");
+        if (!el) return;
+        const cfg = sheetCfg(),
+          on = !!(cfg.url && cfg.eps[activeEp]);
+        el.hidden = !on;
+        if (!on) return;
+        if (state) sheetLast = { state, at: state === "ok" ? Date.now() : sheetLast.at, msg: msg || "" };
+        const s = sheetLast,
+          nc = sheetSt && sheetSt.ep === activeEp ? sheetSt.conflicts.length : 0,
+          np = sheetPending();
+        let t,
+          kind = s.state;
+        const hm = (ms) => {
+          const d = new Date(ms);
+          return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        };
+        if (nc) {
+          t = `共有：衝突 ${nc}件`;
+          kind = "conflict";
+        } else if (s.state === "busy") t = "共有：" + (s.msg || "同期中…");
+        else if (s.state === "error") t = `共有：${s.msg}${np ? `（未送信 ${np}件）` : ""}`;
+        else if (np) {
+          t = `共有：未送信 ${np}件`;
+          kind = "pending";
+        } else t = s.at ? `共有：最新 ${hm(s.at)}` : "共有：待機中";
+        el.textContent = t;
+        el.dataset.state = kind;
+        el.title = nc ? "押すと、どちらの値を残すか選べます" : "押すと今すぐ同期します" + (s.msg && s.state === "error" ? `\n${s.msg}` : "");
+      }
+
+      // ---------- 衝突の選択 ----------
+      function sheetShowConflicts() {
+        const st = sheetSt;
+        if (!st || !st.conflicts.length) return;
+        const rows = st.conflicts
+          .map((x, i) => {
+            const hit = sheetFind(x.id);
+            const name = hit ? `${hit.c.cut || "（番号なし）"} ${rrLabel(hit.v.r)}` : "（消えた版）";
+            const who = st.remote && st.remote.R[x.id] && st.remote.R[x.id].who;
+            return `<tr><td>${escHtml(name)}</td><td>${escHtml(sheetLabel(x.k))}</td><td class="cfVal">${escHtml(x.remote) || "<i>空欄</i>"}${who ? `<small>（${escHtml(who)}）</small>` : ""}</td><td class="cfVal">${escHtml(x.local) || "<i>空欄</i>"}</td><td class="cfPick"><button class="small" data-cf="${i}" data-pick="sheet">シート</button><button class="small" data-cf="${i}" data-pick="mine">自分</button></td></tr>`;
+          })
+          .join("");
+        $("sheetConflictList").innerHTML = `<table class="impTable"><thead><tr><th>カット</th><th>項目</th><th>シートの値</th><th>自分の値</th><th>残す方</th></tr></thead><tbody>${rows}</tbody></table>`;
+        $("sheetConflictModal").classList.add("show");
+      }
+      function sheetResolve(list) {
+        const st = sheetSt;
+        if (!st) return;
+        let changed = false;
+        sheetApplying = true;
+        try {
+          list.forEach(({ x, pick }) => {
+            const hit = sheetFind(x.id);
+            if (!st.base[x.id]) st.base[x.id] = { c: hit ? hit.c.id : "", f: {} };
+            if (pick === "sheet") {
+              if (hit && sheetSet(x.k, hit.c, hit.v, x.remote) === "changed") changed = true;
+              st.base[x.id].f[x.k] = x.remote;
+            } else st.base[x.id].f[x.k] = x.remote; // 基準をシートの値にしておくと、次の同期で自分の値を送る
+            st.conflicts = st.conflicts.filter((y) => y !== x);
+          });
+          if (changed) {
+            loadToForm();
+            renderAll();
+            schedule();
+          }
+        } finally {
+          sheetApplying = false;
+        }
+        sheetStore(st);
+        sheetShow();
+        if (!st.conflicts.length) $("sheetConflictModal").classList.remove("show");
+        else sheetShowConflicts();
+        sheetCycle();
+      }
+
+      // ---------- 環境設定・メニュー ----------
+      function sheetRenderSettings() {
+        const cfg = sheetCfg(),
+          tab = cfg.eps[activeEp];
+        $("sheetUrl").value = cfg.url;
+        $("sheetKey").value = cfg.key;
+        $("sheetUser").value = cfg.user;
+        const cm = common();
+        $("sheetEpState").textContent = tab ? `この話数（${cm.code} / ${cm.ep}）は共有シートのタブ「${tab}」と同期しています。` : `この話数（${cm.code} / ${cm.ep}）は共有していません。`;
+        $("sheetShare").textContent = tab ? "この話数の共有をやめる" : "この話数を共有する";
+        $("sheetShare").disabled = !cfg.url;
+      }
+      // 環境設定を開いているときだけ入力欄を読む（閉じているときに空の欄で設定を消さないように）
+      function sheetReadInputs() {
+        const cfg = sheetCfg();
+        if (!$("settingsModal").classList.contains("show")) return cfg;
+        cfg.url = $("sheetUrl").value.trim();
+        cfg.key = $("sheetKey").value;
+        cfg.user = $("sheetUser").value.trim().slice(0, 30);
+        sheetSaveCfg(cfg);
+        return cfg;
+      }
+      async function sheetPing() {
+        const cfg = sheetReadInputs(),
+          out = $("sheetTestOut");
+        if (!sheetUrlOk(cfg.url)) {
+          out.textContent = "URL の形が違います（https://script.google.com/macros/s/…/exec）";
+          return false;
+        }
+        out.textContent = "接続中…";
+        try {
+          const d = await sheetFetch(cfg, { op: "ping" });
+          out.textContent = `つながりました：スプレッドシート「${d.name}」`;
+          return true;
+        } catch (e) {
+          out.textContent = e.kind === "key" ? "合言葉が違います（スクリプトの KEY と同じにしてください）" : e.kind === "bad" ? "応答を読めません。デプロイの「アクセスできるユーザー」が「全員」か確認してください" : "つながりませんでした（" + e.message + "）";
+          return false;
+        }
+      }
+      // 話数の共有をやめる（手元のデータ・シートの内容は消さない）
+      async function sheetUnbind(ep) {
+        const cfg = sheetCfg();
+        delete cfg.eps[ep];
+        sheetSaveCfg(cfg);
+        if (idb.db) await idb.delMany("kv", [SHEET_ST_PREFIX + ep]);
+        if (sheetSt && sheetSt.ep === ep) sheetSt = null;
+        sheetShow();
+      }
+      async function sheetToggleShare() {
+        const cfg = sheetReadInputs();
+        if (cfg.eps[activeEp]) {
+          if (!confirm("この話数の共有をやめますか？\n手元のデータとシートの内容はどちらもそのまま残ります。")) return;
+          await sheetUnbind(activeEp);
+          sheetRenderSettings();
+          return;
+        }
+        if (!cfg.user && !confirm("自分の名前が空です。シートの「更新者」が空欄になりますが、続けますか？")) return;
+        if (!(await sheetPing())) return;
+        const tab = sheetTabOf();
+        let rows = 0;
+        try {
+          const d = await sheetFetch(cfg, { op: "tabs" });
+          const hit = (d.tabs || []).find((t) => t.name === tab);
+          rows = hit ? hit.rows : 0;
+        } catch (e) {
+          return alert("シートのタブ一覧を読めませんでした。");
+        }
+        if (
+          rows &&
+          !confirm(
+            `共有シートには、すでにタブ「${tab}」（${rows}行）があります。\nこの話数のカットとシートの行を合わせます（同じカットが2つになることがあります）。\n\n他の人が始めた話数に参加するときは、「話数 ▾」の「共有シートから話数を開く」を使ってください。続けますか？`,
+          )
+        )
+          return;
+        if (!rows && !confirm(`この話数（${cuts.length}カット）を共有シートのタブ「${tab}」に書き込み、以後同期します。画像はシートに送りません。続けますか？`)) return;
+        cfg.eps[activeEp] = tab;
+        sheetSaveCfg(cfg);
+        sheetSt = null;
+        sheetRenderSettings();
+        sheetCycle();
+      }
+      // 共有シートのタブから話数を開く（手元に同じ作品・話数があればそれを使う）
+      async function sheetOpenFromSheet() {
+        const cfg = sheetCfg();
+        if (!cfg.url) return alert("先に環境設定（⚙）の「スプレッドシート共有」で、URL と合言葉を入れてください。");
+        let tabs;
+        try {
+          tabs = (await sheetFetch(cfg, { op: "tabs" })).tabs || [];
+        } catch (e) {
+          return alert(e.kind === "key" ? "合言葉が違います。" : "共有シートにつながりませんでした。");
+        }
+        const box = $("sheetTabList");
+        box.innerHTML = tabs.length ? "" : '<p class="hint">共有しているタブがまだありません。</p>';
+        tabs.forEach((t) => {
+          const b = document.createElement("button");
+          b.className = "menuItem";
+          b.innerHTML = `<b>${escHtml(t.name)}</b><small>${t.rows}行</small>`;
+          b.onclick = () => {
+            $("sheetTabModal").classList.remove("show");
+            sheetOpenTab(t);
+          };
+          box.appendChild(b);
+        });
+        $("sheetTabModal").classList.add("show");
+      }
+      async function sheetOpenTab(t) {
+        const cfg = sheetCfg();
+        const bound = Object.keys(cfg.eps).find((id) => cfg.eps[id] === t.name && episodes.some((e) => e.id === id));
+        if (bound) {
+          if (bound !== activeEp) await switchEpisode(bound);
+          return sheetCycle();
+        }
+        const m = /作品コード\s*([A-Za-z0-9]*)\s*話数\s*(\d*)/.exec(t.title || "") || /^([A-Za-z0-9]+)_(\d+)$/.exec(t.name) || [];
+        const code = (m[1] || "").toUpperCase(),
+          ep = m[2] || "";
+        const cur = captureActive();
+        const same = [cur, ...episodes.filter((e) => e.id !== activeEp)].find((e) => e.common && String(e.common.code || "").toUpperCase() === code && String(e.common.ep || "") === ep && !cfg.eps[e.id]);
+        if (same && !confirm(`手元にも ${code} / ${ep} があります。手元の話数ではなく、新しい話数としてシートから開きます（手元の話数はそのまま残ります）。続けますか？`)) return;
+        const ne = await addEpisode(code, ep);
+        cfg.eps[ne.id] = t.name;
+        sheetSaveCfg(cfg);
+        sheetSt = null;
+        const st = await sheetState(ne.id, t.name);
+        st.dropBlank = cuts[0] && cuts[0].id;
+        sheetCycle();
+      }
+      function sheetOpenUrl() {
+        const st = sheetSt;
+        if (st && st.url) window.open(st.url, "_blank", "noopener");
+        else alert("まだシートの場所がわかりません。一度同期してから押してください。");
+      }
+      function initSheetSync() {
+        ["sheetUrl", "sheetKey", "sheetUser"].forEach((id) => ($(id).onchange = () => (sheetReadInputs(), sheetRenderSettings(), sheetShow())));
+        $("sheetTest").onclick = sheetPing;
+        $("sheetShare").onclick = sheetToggleShare;
+        $("sheetCopyScript").onclick = async () => {
+          const src = $("gasSource").textContent.replace(/^\n/, "");
+          try {
+            await navigator.clipboard.writeText(src);
+            $("sheetTestOut").textContent = "スクリプトをコピーしました。Apps Script に貼り付け、KEY を合言葉に変えてください。";
+          } catch (e) {
+            downloadBlob("AniRetake共有シート.gs.txt", new Blob([src], { type: "text/plain" }));
+          }
+        };
+        $("sheetState").onclick = () => (sheetSt && sheetSt.ep === activeEp && sheetSt.conflicts.length ? sheetShowConflicts() : sheetCycle());
+        $("sheetSyncNow").onclick = () => {
+          $("outputBox").removeAttribute("open");
+          if (!sheetActiveTab()) return alert("この話数は共有していません（環境設定 ⚙ の「スプレッドシート共有」で始めます）。");
+          sheetCycle();
+        };
+        $("sheetOpen").onclick = () => {
+          $("outputBox").removeAttribute("open");
+          sheetOpenUrl();
+        };
+        $("epFromSheet").onclick = () => {
+          $("epMenu").removeAttribute("open");
+          sheetOpenFromSheet();
+        };
+        $("sheetTabCancel").onclick = () => $("sheetTabModal").classList.remove("show");
+        $("sheetConflictClose").onclick = () => $("sheetConflictModal").classList.remove("show");
+        $("sheetConflictList").onclick = (e) => {
+          const b = e.target.closest("[data-cf]");
+          if (!b || !sheetSt) return;
+          const x = sheetSt.conflicts[+b.dataset.cf];
+          if (x) sheetResolve([{ x, pick: b.dataset.pick }]);
+        };
+        $("sheetAllSheet").onclick = () => sheetSt && sheetResolve(sheetSt.conflicts.map((x) => ({ x, pick: "sheet" })));
+        $("sheetAllMine").onclick = () => sheetSt && sheetResolve(sheetSt.conflicts.map((x) => ({ x, pick: "mine" })));
+        $("settingsBtn").addEventListener("click", sheetRenderSettings);
+        // 画面を開いている間は30秒ごと、画面に戻ったとき・つながったときにも確認する
+        setInterval(() => {
+          if (document.visibilityState === "visible" && sheetActiveTab() && !sheetBusy) sheetCycle();
+        }, SHEET_POLL);
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible" && sheetActiveTab()) sheetCycle();
+        });
+        window.addEventListener("online", () => sheetActiveTab() && sheetCycle());
+        sheetShow();
+      }
       initGrid();
       initTableIO();
-      initStorage();
+      initSheetSync();
+      Promise.resolve(initStorage()).then(() => {
+        sheetShow();
+        if (sheetActiveTab()) sheetCycle();
+      });
+    </script>
+    <script type="text/plain" id="gasSource">
+// AniRetake 共有シート用スクリプト（v1）
+// 使い方：AniRetake の環境設定（⚙）→「スプレッドシート共有」の説明を見てください。
+// 下の KEY を、メンバーと決めた合言葉に書き換えてから「デプロイ」してください。
+const KEY = "ここに合言葉";
+
+const ID_V = "ID(版)",
+  ID_C = "ID(カット)",
+  WHO = "更新者",
+  WHEN = "更新日時",
+  HEAD_ROW = 2;
+
+function out_(o) {
+  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+}
+function okKey_(k) {
+  return KEY !== "ここに合言葉" && String(k || "") === KEY;
+}
+// AniRetake が作ったタブだけを扱う（2行目の左端が ID(版)）
+function isTab_(sh) {
+  return sh.getRange(HEAD_ROW, 1).getDisplayValue() === ID_V;
+}
+function read_(sh) {
+  const lr = sh.getLastRow(),
+    lc = sh.getLastColumn();
+  if (lr < HEAD_ROW || lc < 1) return { head: [], rows: [] };
+  const vals = sh.getRange(HEAD_ROW, 1, lr - HEAD_ROW + 1, lc).getDisplayValues();
+  return { head: vals[0], rows: vals.slice(1) };
+}
+function hash_(d) {
+  return Utilities.base64Encode(
+    Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify(d), Utilities.Charset.UTF_8),
+  );
+}
+
+function doGet(e) {
+  const p = (e && e.parameter) || {};
+  if (!okKey_(p.key)) return out_({ ok: false, error: "key" });
+  const ss = SpreadsheetApp.getActive();
+  if (p.op === "ping") return out_({ ok: true, name: ss.getName(), v: 1 });
+  if (p.op === "tabs")
+    return out_({
+      ok: true,
+      tabs: ss
+        .getSheets()
+        .filter(isTab_)
+        .map((sh) => ({ name: sh.getName(), title: sh.getRange(1, 1).getDisplayValue(), rows: Math.max(0, sh.getLastRow() - HEAD_ROW) })),
+    });
+  if (p.op === "rows") {
+    const sh = ss.getSheetByName(String(p.tab || ""));
+    if (!sh) return out_({ ok: true, missing: true });
+    if (!isTab_(sh)) return out_({ ok: false, error: "notTab" });
+    const d = read_(sh),
+      h = hash_(d);
+    if (p.h && p.h === h) return out_({ ok: true, same: true, h: h });
+    return out_({ ok: true, head: d.head, rows: d.rows, h: h, url: ss.getUrl() + "#gid=" + sh.getSheetId() });
+  }
+  return out_({ ok: false, error: "op" });
+}
+
+function doPost(e) {
+  let b;
+  try {
+    b = JSON.parse(e.postData.contents);
+  } catch (err) {
+    return out_({ ok: false, error: "json" });
+  }
+  if (!okKey_(b.key)) return out_({ ok: false, error: "key" });
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return out_({ ok: false, error: "busy" });
+  try {
+    const ss = SpreadsheetApp.getActive();
+    const tab = String(b.tab || "");
+    if (!tab) return out_({ ok: false, error: "tab" });
+    let sh = ss.getSheetByName(tab);
+    if (!sh) {
+      sh = ss.insertSheet(tab);
+      const head = [ID_V, ID_C].concat(b.head || [], [WHO, WHEN]);
+      // すべて文字として扱う（001 が 1 に、日付が別の形に変わらないように）
+      sh.getRange(1, 1, sh.getMaxRows(), Math.max(sh.getMaxColumns(), head.length)).setNumberFormat("@");
+      sh.getRange(1, 1).setValue(String(b.title || "")).setFontWeight("bold");
+      sh.getRange(HEAD_ROW, 1, 1, head.length).setValues([head]).setFontWeight("bold").setBackground("#2c2c2b").setFontColor("#ffffff");
+      sh.setFrozenRows(HEAD_ROW);
+      sh.getRange(HEAD_ROW + 1, 1, sh.getMaxRows() - HEAD_ROW, 2).setFontColor("#9a9893");
+      sh.setColumnWidth(1, 60);
+      sh.setColumnWidth(2, 60);
+    }
+    if (!isTab_(sh)) return out_({ ok: false, error: "notTab" });
+    const d = read_(sh),
+      head = d.head.slice();
+    // 足りない列はうしろに足す
+    (b.head || []).concat([WHO, WHEN]).forEach((h) => {
+      if (head.indexOf(h) < 0) {
+        head.push(h);
+        sh.getRange(HEAD_ROW, head.length).setNumberFormat("@").setValue(h).setFontWeight("bold");
+      }
+    });
+    const col = {};
+    head.forEach((h, i) => {
+      if (h && col[h] == null) col[h] = i;
+    });
+    const rowOf = {};
+    d.rows.forEach((r, i) => {
+      const id = r[col[ID_V]];
+      if (id && rowOf[id] == null) rowOf[id] = i;
+    });
+    const now = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), "yyyy/MM/dd HH:mm"),
+      who = String(b.user || "");
+    const cur = (ri, h) => (col[h] == null || d.rows[ri][col[h]] == null ? "" : String(d.rows[ri][col[h]]));
+    const put = (ri, h, v) => {
+      sh.getRange(HEAD_ROW + 1 + ri, col[h] + 1).setNumberFormat("@").setValue(v);
+      while (d.rows[ri].length <= col[h]) d.rows[ri].push("");
+      d.rows[ri][col[h]] = v;
+    };
+    const res = [],
+      dels = [],
+      adds = [],
+      stamped = {};
+    const stamp = (ri) => {
+      if (stamped[ri]) return;
+      stamped[ri] = 1;
+      put(ri, WHO, who);
+      put(ri, WHEN, now);
+    };
+    (b.ops || []).forEach((op, i) => {
+      if (op.t === "set") {
+        const ri = rowOf[op.id];
+        if (ri == null || ri < 0) return res.push({ i: i, ok: false, gone: true });
+        if (cur(ri, op.k) !== String(op.x)) return res.push({ i: i, ok: false, cur: cur(ri, op.k) });
+        put(ri, op.k, String(op.v));
+        stamp(ri);
+        res.push({ i: i, ok: true });
+      } else if (op.t === "add") {
+        if (rowOf[op.id] != null) return res.push({ i: i, ok: false, dup: true });
+        adds.push(
+          head.map((h) =>
+            h === ID_V ? op.id : h === ID_C ? op.c : h === WHO ? who : h === WHEN ? now : op.f && op.f[h] != null ? String(op.f[h]) : "",
+          ),
+        );
+        rowOf[op.id] = -1;
+        res.push({ i: i, ok: true });
+      } else if (op.t === "del") {
+        const ri = rowOf[op.id];
+        if (ri == null || ri < 0) return res.push({ i: i, ok: true });
+        const bad = Object.keys(op.x || {}).filter((h) => col[h] != null && cur(ri, h) !== String(op.x[h]));
+        if (bad.length) return res.push({ i: i, ok: false, changed: bad });
+        dels.push(ri);
+        res.push({ i: i, ok: true });
+      } else if (op.t === "claim") {
+        // シートで足した行（ID が空）に ID を書き込む
+        const ri = op.row;
+        if (!(ri >= 0 && ri < d.rows.length) || cur(ri, ID_V) !== "" || cur(ri, op.k) !== String(op.x)) return res.push({ i: i, ok: false });
+        put(ri, ID_V, op.id);
+        put(ri, ID_C, op.c);
+        rowOf[op.id] = ri;
+        res.push({ i: i, ok: true });
+      } else res.push({ i: i, ok: false });
+    });
+    if (adds.length) {
+      const rg = sh.getRange(sh.getLastRow() + 1, 1, adds.length, head.length);
+      rg.setNumberFormat("@");
+      rg.setValues(adds);
+      sh.getRange(rg.getRow(), 1, adds.length, 2).setFontColor("#9a9893");
+    }
+    dels
+      .sort((x, y) => y - x)
+      .forEach((ri) => sh.deleteRow(HEAD_ROW + 1 + ri));
+    return out_({ ok: true, res: res, url: ss.getUrl() + "#gid=" + sh.getSheetId() });
+  } finally {
+    lock.releaseLock();
+  }
+}
     </script>
   </body>
 </html>

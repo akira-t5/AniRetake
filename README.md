@@ -132,3 +132,7 @@
 MIT License（[LICENSE](./LICENSE)）
 
 サポート・最新情報： [FANBOX](https://akira0w0.fanbox.cc/) / [X](https://x.com/Akira_0m0_)
+
+## 開発中：スプレッドシート共有（`feature/sheet-sync` ブランチのみ）
+
+Google スプレッドシートを置き場にして、同じ話数を複数人で入力する機能を開発中です（v2.1.0-dev）。公開版には入っていません。試し方は [experimental/sheet-sync/試用手順.md](./experimental/sheet-sync/試用手順.md) を見てください。
